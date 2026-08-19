@@ -7,7 +7,6 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
@@ -113,11 +112,19 @@ export default function QueryPanel({ query, onChange, suppliers, items }: Props)
     tags.push({ key: "ov", label: "僅覆寫", clear: () => ({ ...query, overriddenOnly: false }) });
   }
 
+  const queryOn = isQueryActive(query);
+
   return (
     <Stack spacing={1.5}>
-      <Paper variant="outlined" sx={{ p: 2 }}>
+      <Accordion disableGutters elevation={0} sx={{ "&:before": { display: "none" }, border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+        <AccordionSummary expandIcon={<ExpandMore />}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Typography sx={{ fontWeight: 500 }}>查詢</Typography>
+            {queryOn ? <Chip size="small" color="primary" label="已套用" /> : null}
+          </Stack>
+        </AccordionSummary>
+        <AccordionDetails>
         <Stack spacing={2}>
-          <Typography sx={{ fontWeight: 500 }}>查詢</Typography>
           <div>
             <Typography variant="caption" color="text.secondary">
               供應商
@@ -256,7 +263,8 @@ export default function QueryPanel({ query, onChange, suppliers, items }: Props)
             清除查詢
           </Button>
         </Stack>
-      </Paper>
+        </AccordionDetails>
+      </Accordion>
       {isQueryActive(query) ? (
         <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
           {tags.map((tag) => (

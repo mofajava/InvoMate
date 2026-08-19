@@ -83,6 +83,22 @@ function Body() {
     }));
   }
 
+  function remove(id: string) {
+    const inboundUsed = ledger.inboundRecords.filter((row) => row.itemId === id).length;
+    const adjUsed = ledger.stockAdjustments.filter((row) => row.itemId === id).length;
+    if (inboundUsed + adjUsed > 0) {
+      setError(`已有 ${inboundUsed} 筆進貨、${adjUsed} 筆庫存調整使用此品項，無法刪除。可改為停用。`);
+      return;
+    }
+    if (!confirm("確定刪除這個品項？")) return;
+    setError("");
+    updateLedger((led) => ({
+      ...led,
+      items: led.items.filter((item) => item.id !== id),
+      unitConversions: led.unitConversions.filter((c) => c.itemId !== id),
+    }));
+  }
+
   function startConversion(itemId: string) {
     const existing = ledger.unitConversions.find((c) => c.itemId === itemId);
     setEditingId(null);
@@ -181,6 +197,7 @@ function Body() {
                 <CardActions>
                   <Button size="small" onClick={() => startRename(item.id, item.name)}>重新命名</Button>
                   <Button size="small" onClick={() => toggle(item.id)}>{item.archived ? "啟用" : "停用"}</Button>
+                  <Button size="small" color="error" onClick={() => remove(item.id)}>刪除</Button>
                   {item.baseUnit === "jin" ? (
                     <Button size="small" onClick={() => startConversion(item.id)}>編輯箱換算</Button>
                   ) : null}

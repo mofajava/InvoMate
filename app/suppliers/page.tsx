@@ -75,6 +75,20 @@ function Body() {
     }));
   }
 
+  function remove(id: string) {
+    const used = ledger.inboundRecords.filter((row) => row.supplierId === id).length;
+    if (used > 0) {
+      setError(`已有 ${used} 筆進貨使用此供應商，無法刪除。可改為停用。`);
+      return;
+    }
+    if (!confirm("確定刪除這個供應商？")) return;
+    setError("");
+    updateLedger((led) => ({
+      ...led,
+      suppliers: led.suppliers.filter((s) => s.id !== id),
+    }));
+  }
+
   return (
     <Stack spacing={2}>
       <Typography variant="h5">供應商</Typography>
@@ -113,6 +127,7 @@ function Body() {
                 <CardActions>
                   <Button size="small" onClick={() => startRename(s.id, s.name)}>重新命名</Button>
                   <Button size="small" onClick={() => toggle(s.id)}>{s.archived ? "啟用" : "停用"}</Button>
+                  <Button size="small" color="error" onClick={() => remove(s.id)}>刪除</Button>
                 </CardActions>
               </>
             )}
