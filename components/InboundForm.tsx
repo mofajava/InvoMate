@@ -1,6 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import RocDateFields from "@/components/RocDateFields";
@@ -147,104 +152,101 @@ export default function InboundForm({ editId }: Props) {
   }
 
   if (editId && !existing) {
-    return <p>找不到這筆進貨。</p>;
+    return <Alert severity="warning">找不到這筆進貨。</Alert>;
   }
 
   return (
-    <form className="mx-auto grid max-w-xl gap-3" onSubmit={submit}>
-      <h1 className="text-xl font-bold">{existing ? "編輯進貨" : "新增進貨"}</h1>
+    <Stack component="form" spacing={2} sx={{ maxWidth: 560, mx: "auto" }} onSubmit={submit}>
+      <Typography variant="h5">{existing ? "編輯進貨" : "新增進貨"}</Typography>
       <RocDateFields iso={isValidIsoDate(date) ? date : "2025-01-01"} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
-      <label className="text-sm">
-        供應商
-        <select className="mt-1 w-full rounded-lg border px-2" value={supplierId} onChange={(e) => {
+      <TextField
+        select
+        label="供應商"
+        value={supplierId}
+        onChange={(e) => {
           setSupplierId(e.target.value);
           applyLastPrice(e.target.value, itemId, grade === "醜" ? "醜" : "");
-        }}>
-          <option value="">請選擇</option>
-          {activeSuppliers.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-      </label>
-      <div className="flex gap-2">
-        <input className="flex-1 rounded-lg border px-2" placeholder="新增供應商名稱" value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} />
-        <button type="button" className="rounded-lg border px-3" onClick={addSupplier}>新增</button>
-      </div>
-      <label className="text-sm">
-        品項
-        <select className="mt-1 w-full rounded-lg border px-2" value={itemId} onChange={(e) => {
+        }}
+      >
+        <MenuItem value="">請選擇</MenuItem>
+        {activeSuppliers.map((s) => (
+          <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+        ))}
+      </TextField>
+      <Stack direction="row" spacing={1}>
+        <TextField label="新增供應商名稱" value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} />
+        <Button variant="outlined" onClick={addSupplier} sx={{ whiteSpace: "nowrap" }}>新增</Button>
+      </Stack>
+      <TextField
+        select
+        label="品項"
+        value={itemId}
+        onChange={(e) => {
           const next = e.target.value;
           setItemId(next);
           const nextItem = ledger.items.find((i) => i.id === next);
           if (nextItem) setUnit(nextItem.baseUnit);
           applyLastPrice(supplierId, next, grade === "醜" ? "醜" : "");
-        }}>
-          <option value="">請選擇</option>
-          {activeItems.map((i) => (
-            <option key={i.id} value={i.id}>{i.name}</option>
-          ))}
-        </select>
-      </label>
-      <label className="text-sm">
-        品級
-        <select className="mt-1 w-full rounded-lg border px-2" value={grade} onChange={(e) => {
+        }}
+      >
+        <MenuItem value="">請選擇</MenuItem>
+        {activeItems.map((i) => (
+          <MenuItem key={i.id} value={i.id}>{i.name}</MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        label="品級"
+        value={grade}
+        onChange={(e) => {
           setGrade(e.target.value);
           applyLastPrice(supplierId, itemId, e.target.value === "醜" ? "醜" : e.target.value);
-        }}>
-          <option value="">未分級</option>
-          <option value="醜">醜</option>
-        </select>
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="text-sm">
-          數量
-          <input className="mt-1 w-full rounded-lg border px-2" inputMode="decimal" value={qty} onChange={(e) => onQtyOrPrice(e.target.value, unitPrice)} />
-        </label>
-        <label className="text-sm">
-          單位
-          <select className="mt-1 w-full rounded-lg border px-2" value={unit} onChange={(e) => setUnit(e.target.value as UnitCode)}>
-            {units.map((u) => (
-              <option key={u} value={u}>{UNIT_LABEL[u]}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {previewBase !== null && unit === "box" ? <p className="text-sm text-neutral-600">約 {previewBase} 斤</p> : null}
-      {unitHint ? <p className="text-sm text-amber-800">{unitHint}</p> : null}
-      <label className="text-sm">
-        單價（元／該單位）
-        <input className="mt-1 w-full rounded-lg border px-2" inputMode="numeric" value={unitPrice} onChange={(e) => onQtyOrPrice(qty, e.target.value)} />
-      </label>
-      <label className="text-sm">
-        金額
-        <input
-          className="mt-1 w-full rounded-lg border px-2"
-          inputMode="numeric"
-          value={amount}
-          onChange={(e) => {
-            setAmountLocked(true);
-            setAmount(e.target.value);
-          }}
-        />
-      </label>
-      <p className="text-sm text-neutral-600">公式金額 {formatMoney(formula)}</p>
-      {amountLocked ? (
-        <button type="button" className="w-fit rounded-lg border px-3 text-sm" onClick={() => {
-          setAmountLocked(false);
-          setAmount(String(formula));
-        }}>
-          恢復公式金額
-        </button>
+        }}
+      >
+        <MenuItem value="">未分級</MenuItem>
+        <MenuItem value="醜">醜</MenuItem>
+      </TextField>
+      <Stack direction="row" spacing={1.5}>
+        <TextField label="數量" inputMode="decimal" value={qty} onChange={(e) => onQtyOrPrice(e.target.value, unitPrice)} />
+        <TextField select label="單位" value={unit} onChange={(e) => setUnit(e.target.value as UnitCode)}>
+          {units.map((u) => (
+            <MenuItem key={u} value={u}>{UNIT_LABEL[u]}</MenuItem>
+          ))}
+        </TextField>
+      </Stack>
+      {previewBase !== null && unit === "box" ? (
+        <Typography variant="body2" color="text.secondary">約 {previewBase} 斤</Typography>
       ) : null}
-      <label className="text-sm">
-        備註
-        <textarea className="mt-1 min-h-20 w-full rounded-lg border px-2 py-2" value={note} onChange={(e) => setNote(e.target.value)} />
-      </label>
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <Link href="/inbounds/" className="flex items-center justify-center rounded-xl border">取消</Link>
-        <button type="submit" className="rounded-xl bg-[#2f6f4e] text-white">儲存</button>
-      </div>
-    </form>
+      {unitHint ? <Alert severity="warning">{unitHint}</Alert> : null}
+      <TextField label="單價（元／該單位）" inputMode="numeric" value={unitPrice} onChange={(e) => onQtyOrPrice(qty, e.target.value)} />
+      <TextField
+        label="金額"
+        inputMode="numeric"
+        value={amount}
+        onChange={(e) => {
+          setAmountLocked(true);
+          setAmount(e.target.value);
+        }}
+      />
+      <Typography variant="body2" color="text.secondary">公式金額 {formatMoney(formula)}</Typography>
+      {amountLocked ? (
+        <Button
+          variant="text"
+          onClick={() => {
+            setAmountLocked(false);
+            setAmount(String(formula));
+          }}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          恢復公式金額
+        </Button>
+      ) : null}
+      <TextField label="備註" multiline minRows={3} value={note} onChange={(e) => setNote(e.target.value)} />
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      <Stack direction="row" spacing={1.5}>
+        <Button fullWidth variant="outlined" onClick={() => router.push("/inbounds/")}>取消</Button>
+        <Button fullWidth type="submit" variant="contained">儲存</Button>
+      </Stack>
+    </Stack>
   );
 }

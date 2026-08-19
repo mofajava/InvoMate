@@ -1,5 +1,15 @@
 "use client";
 
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import MenuItem from "@mui/material/MenuItem";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import AppShell from "@/components/AppShell";
 import { newId } from "@/lib/seed";
@@ -115,91 +125,72 @@ function Body() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-bold">品項</h1>
-      <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
-        <input className="rounded-lg border px-3" value={name} onChange={(e) => setName(e.target.value)} placeholder="新品項，例如山藥成品" />
-        <select className="rounded-lg border px-2" value={baseUnit} onChange={(e) => setBaseUnit(e.target.value as BaseUnit)}>
-          <option value="jin">斤</option>
-          <option value="bag">包</option>
-        </select>
-        <button type="button" className="rounded-xl bg-[#2f6f4e] px-4 text-white" onClick={add}>
-          新增
-        </button>
-      </div>
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <ul className="space-y-2">
+    <Stack spacing={2}>
+      <Typography variant="h5">品項</Typography>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <TextField label="新品項，例如山藥成品" value={name} onChange={(e) => setName(e.target.value)} />
+        <TextField select label="基準單位" value={baseUnit} onChange={(e) => setBaseUnit(e.target.value as BaseUnit)} sx={{ minWidth: 120 }}>
+          <MenuItem value="jin">斤</MenuItem>
+          <MenuItem value="bag">包</MenuItem>
+        </TextField>
+        <Button variant="contained" onClick={add} sx={{ whiteSpace: "nowrap" }}>新增</Button>
+      </Stack>
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      <Stack spacing={1.5}>
         {ledger.items.map((item) => (
-          <li key={item.id} className="rounded-xl border bg-white p-3">
+          <Card key={item.id}>
             {editingId === item.id ? (
-              <div className="grid gap-2">
-                <input
-                  className="w-full rounded-lg border px-3"
-                  value={editingName}
-                  autoFocus
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") saveRename();
-                    if (e.key === "Escape") setEditingId(null);
-                  }}
-                />
-                <div className="flex gap-2">
-                  <button type="button" className="flex-1 rounded-xl border" onClick={() => setEditingId(null)}>
-                    取消
-                  </button>
-                  <button type="button" className="flex-1 rounded-xl bg-[#2f6f4e] text-white" onClick={saveRename}>
-                    儲存
-                  </button>
-                </div>
-              </div>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <TextField
+                    autoFocus
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveRename();
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <Button fullWidth variant="outlined" onClick={() => setEditingId(null)}>取消</Button>
+                    <Button fullWidth variant="contained" onClick={saveRename}>儲存</Button>
+                  </Stack>
+                </Stack>
+              </CardContent>
             ) : convertingId === item.id ? (
-              <div className="grid gap-2">
-                <p className="text-sm font-medium">{item.name}　箱 → {item.baseUnit === "jin" ? "斤" : "包"}</p>
-                <label className="text-sm">
-                  幾箱
-                  <input className="mt-1 w-full rounded-lg border px-3" inputMode="numeric" value={fromQty} onChange={(e) => setFromQty(e.target.value)} />
-                </label>
-                <label className="text-sm">
-                  等於多少{item.baseUnit === "jin" ? "斤" : "包"}
-                  <input className="mt-1 w-full rounded-lg border px-3" inputMode="numeric" value={toQty} onChange={(e) => setToQty(e.target.value)} />
-                </label>
-                <div className="flex gap-2">
-                  <button type="button" className="flex-1 rounded-xl border" onClick={() => setConvertingId(null)}>
-                    取消
-                  </button>
-                  <button type="button" className="flex-1 rounded-xl bg-[#2f6f4e] text-white" onClick={saveConversion}>
-                    儲存
-                  </button>
-                </div>
-              </div>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Typography sx={{ fontWeight: 500 }}>{item.name}　箱 → {item.baseUnit === "jin" ? "斤" : "包"}</Typography>
+                  <TextField label="幾箱" inputMode="numeric" value={fromQty} onChange={(e) => setFromQty(e.target.value)} />
+                  <TextField label={`等於多少${item.baseUnit === "jin" ? "斤" : "包"}`} inputMode="numeric" value={toQty} onChange={(e) => setToQty(e.target.value)} />
+                  <Stack direction="row" spacing={1}>
+                    <Button fullWidth variant="outlined" onClick={() => setConvertingId(null)}>取消</Button>
+                    <Button fullWidth variant="contained" onClick={saveConversion}>儲存</Button>
+                  </Stack>
+                </Stack>
+              </CardContent>
             ) : (
               <>
-                <div>
-                  <p className="font-medium">
-                    {item.name}
-                    {item.archived ? <span className="ml-2 text-sm text-neutral-500">已停用</span> : null}
-                  </p>
-                  <p className="text-sm text-neutral-600">{conversionSummary(item, ledger.unitConversions)}</p>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" className="rounded-lg border px-3 text-sm" onClick={() => startRename(item.id, item.name)}>
-                    重新命名
-                  </button>
-                  <button type="button" className="rounded-lg border px-3 text-sm" onClick={() => toggle(item.id)}>
-                    {item.archived ? "啟用" : "停用"}
-                  </button>
+                <CardContent>
+                  <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>
+                    <Typography sx={{ fontWeight: 500 }}>{item.name}</Typography>
+                    {item.archived ? <Chip size="small" label="已停用" /> : null}
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary">{conversionSummary(item, ledger.unitConversions)}</Typography>
+                </CardContent>
+                <CardActions>
+                  <Button size="small" onClick={() => startRename(item.id, item.name)}>重新命名</Button>
+                  <Button size="small" onClick={() => toggle(item.id)}>{item.archived ? "啟用" : "停用"}</Button>
                   {item.baseUnit === "jin" ? (
-                    <button type="button" className="rounded-lg border px-3 text-sm" onClick={() => startConversion(item.id)}>
-                      編輯箱換算
-                    </button>
+                    <Button size="small" onClick={() => startConversion(item.id)}>編輯箱換算</Button>
                   ) : null}
-                </div>
+                </CardActions>
               </>
             )}
-          </li>
+          </Card>
         ))}
-      </ul>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 

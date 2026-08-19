@@ -1,5 +1,6 @@
 "use client";
 
+import CircularProgress from "@mui/material/CircularProgress";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import AppShell from "@/components/AppShell";
@@ -13,7 +14,7 @@ function EditInner() {
 export default function Page() {
   return (
     <AppShell>
-      <Suspense fallback={<p>載入中…</p>}>
+      <Suspense fallback={<CircularProgress />}>
         <EditInner />
       </Suspense>
     </AppShell>

@@ -1,6 +1,24 @@
 "use client";
 
-import Link from "next/link";
+import Add from "@mui/icons-material/Add";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import Fab from "@mui/material/Fab";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Typography from "@mui/material/Typography";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import ExportDialog from "@/components/ExportDialog";
@@ -13,6 +31,7 @@ import { useLedger } from "@/lib/store";
 import { UNIT_LABEL } from "@/lib/units";
 
 function InboundsBody() {
+  const router = useRouter();
   const { ledger, updateLedger } = useLedger();
   const [query, setQuery] = useState(emptyQuery);
   const rows = useMemo(
@@ -34,99 +53,114 @@ function InboundsBody() {
   }
 
   const summary = (
-    <p className="rounded-lg bg-white px-3 py-2 text-sm">
-      {totals.count} 筆 · 數量 {formatQty(totals.qtyInBase)} · 金額 {formatMoney(totals.amount)} 元
-    </p>
+    <Paper variant="outlined" sx={{ px: 2, py: 1.5 }}>
+      <Typography variant="body2">
+        {totals.count} 筆 · 數量 {formatQty(totals.qtyInBase)} · 金額 {formatMoney(totals.amount)} 元
+      </Typography>
+    </Paper>
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">進貨</h1>
-        <div className="flex flex-wrap gap-2">
+    <Stack spacing={2}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
+        <Typography variant="h5">進貨</Typography>
+        <Stack direction="row" sx={{ display: { xs: "none", sm: "flex" }, flexWrap: "wrap", gap: 1 }}>
           <ImportLedgerButton />
           <ExportDialog query={query} />
-          <Link href="/inbounds/new/" className="rounded-xl bg-[#2f6f4e] px-4 py-2 text-white">
+          <Button variant="contained" startIcon={<Add />} onClick={() => router.push("/inbounds/new/")}>
             新增進貨
-          </Link>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+        <Stack direction="row" sx={{ display: { xs: "flex", sm: "none" }, flexWrap: "wrap", gap: 1 }}>
+          <ImportLedgerButton />
+          <ExportDialog query={query} />
+        </Stack>
+      </Stack>
       <QueryPanel query={query} onChange={setQuery} suppliers={ledger.suppliers} items={ledger.items} />
       {summary}
-      <div className="space-y-2 md:hidden">
-        {rows.length === 0 ? <p className="text-sm text-neutral-600">沒有符合的進貨</p> : null}
+      <Stack spacing={1.5} sx={{ display: { md: "none" } }}>
+        {rows.length === 0 ? <Typography color="text.secondary">沒有符合的進貨</Typography> : null}
         {rows.map((row) => (
-          <article key={row.id} className="rounded-xl border border-stone-200 bg-white p-3">
-            <p className="font-medium">
-              {formatRoc(row.date)} · {nameOf.supplier(row.supplierId)}
-            </p>
-            <p className="text-sm">
-              {nameOf.item(row.itemId)}
-              {row.grade ? `／${row.grade}` : ""}
-            </p>
-            <p className="text-sm">
-              {formatQty(row.qty)} {UNIT_LABEL[row.unit]} · {formatMoney(row.unitPrice)} 元 · {formatMoney(row.amount)} 元
-            </p>
-            {row.amountOverridden ? (
-              <p className="text-sm text-amber-800">
-                公式 {formatMoney(row.computedAmount)}，差 {formatMoney(amountDiff(row.amount, row.computedAmount))}
-              </p>
-            ) : null}
-            <div className="mt-2 flex gap-3 text-sm">
-              <Link href={`/inbounds/edit/?id=${row.id}`}>編輯</Link>
-              <button type="button" onClick={() => remove(row.id)}>
-                刪除
-              </button>
-            </div>
-          </article>
+          <Card key={row.id}>
+            <CardContent>
+              <Typography sx={{ fontWeight: 500 }}>
+                {formatRoc(row.date)} · {nameOf.supplier(row.supplierId)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {nameOf.item(row.itemId)}
+                {row.grade ? `／${row.grade}` : ""}
+              </Typography>
+              <Typography variant="body2">
+                {formatQty(row.qty)} {UNIT_LABEL[row.unit]} · {formatMoney(row.unitPrice)} 元 · {formatMoney(row.amount)} 元
+              </Typography>
+              {row.amountOverridden ? (
+                <Chip
+                  size="small"
+                  color="warning"
+                  sx={{ mt: 1 }}
+                  label={`公式 ${formatMoney(row.computedAmount)}，差 ${formatMoney(amountDiff(row.amount, row.computedAmount))}`}
+                />
+              ) : null}
+            </CardContent>
+            <CardActions>
+              <Button size="small" onClick={() => router.push(`/inbounds/edit/?id=${row.id}`)}>編輯</Button>
+              <Button size="small" color="error" onClick={() => remove(row.id)}>刪除</Button>
+            </CardActions>
+          </Card>
         ))}
-      </div>
-      <div className="hidden overflow-x-auto md:block">
-        <table className="min-w-full border-collapse bg-white text-sm">
-          <thead>
-            <tr className="border-b text-left">
+      </Stack>
+      <TableContainer component={Paper} variant="outlined" sx={{ display: { xs: "none", md: "block" } }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
               {["日期", "供應商", "品項", "數量", "基準", "單價", "金額", ""].map((h) => (
-                <th key={h} className="whitespace-nowrap px-2 py-2">
-                  {h}
-                </th>
+                <TableCell key={h}>{h}</TableCell>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {rows.map((row) => (
-              <tr key={row.id} className="border-b">
-                <td className="whitespace-nowrap px-2 py-2">{formatRoc(row.date)}</td>
-                <td className="px-2 py-2">{nameOf.supplier(row.supplierId)}</td>
-                <td className="px-2 py-2">
+              <TableRow key={row.id} hover>
+                <TableCell sx={{ whiteSpace: "nowrap" }}>{formatRoc(row.date)}</TableCell>
+                <TableCell>{nameOf.supplier(row.supplierId)}</TableCell>
+                <TableCell>
                   {nameOf.item(row.itemId)}
                   {row.grade ? `／${row.grade}` : ""}
-                </td>
-                <td className="px-2 py-2">
+                </TableCell>
+                <TableCell>
                   {formatQty(row.qty)} {UNIT_LABEL[row.unit]}
-                </td>
-                <td className="px-2 py-2">{formatQty(row.qtyInBase)}</td>
-                <td className="px-2 py-2">{formatMoney(row.unitPrice)}</td>
-                <td className="px-2 py-2">
+                </TableCell>
+                <TableCell>{formatQty(row.qtyInBase)}</TableCell>
+                <TableCell>{formatMoney(row.unitPrice)}</TableCell>
+                <TableCell>
                   {formatMoney(row.amount)}
                   {row.amountOverridden ? (
-                    <span className="block text-xs text-amber-800">
+                    <Typography variant="caption" sx={{ color: "warning.main", display: "block" }}>
                       公式 {formatMoney(row.computedAmount)} 差 {formatMoney(amountDiff(row.amount, row.computedAmount))}
-                    </span>
+                    </Typography>
                   ) : null}
-                </td>
-                <td className="px-2 py-2">
-                  <Link href={`/inbounds/edit/?id=${row.id}`}>編輯</Link>{" "}
-                  <button type="button" onClick={() => remove(row.id)}>
-                    刪除
-                  </button>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell>
+                  <Button size="small" onClick={() => router.push(`/inbounds/edit/?id=${row.id}`)}>編輯</Button>
+                  <Button size="small" color="error" onClick={() => remove(row.id)}>刪除</Button>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
       {summary}
-    </div>
+      <Box sx={{ display: { sm: "none" } }}>
+        <Fab
+          color="primary"
+          aria-label="新增進貨"
+          onClick={() => router.push("/inbounds/new/")}
+          sx={{ position: "fixed", right: 16, bottom: 80 }}
+        >
+          <Add />
+        </Fab>
+      </Box>
+    </Stack>
   );
 }
 

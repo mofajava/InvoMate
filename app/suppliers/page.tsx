@@ -1,5 +1,14 @@
 "use client";
 
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import AppShell from "@/components/AppShell";
 import { newId } from "@/lib/seed";
@@ -67,59 +76,50 @@ function Body() {
   }
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-bold">供應商</h1>
-      <div className="flex gap-2">
-        <input className="flex-1 rounded-lg border px-3" value={name} onChange={(e) => setName(e.target.value)} placeholder="新供應商" />
-        <button type="button" className="rounded-xl bg-[#2f6f4e] px-4 text-white" onClick={add}>
-          新增
-        </button>
-      </div>
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <ul className="space-y-2">
+    <Stack spacing={2}>
+      <Typography variant="h5">供應商</Typography>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+        <TextField label="新供應商" value={name} onChange={(e) => setName(e.target.value)} />
+        <Button variant="contained" onClick={add} sx={{ whiteSpace: "nowrap" }}>新增</Button>
+      </Stack>
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      <Stack spacing={1.5}>
         {ledger.suppliers.map((s) => (
-          <li key={s.id} className="rounded-xl border bg-white p-3">
+          <Card key={s.id}>
             {editingId === s.id ? (
-              <div className="grid gap-2">
-                <input
-                  className="w-full rounded-lg border px-3"
-                  value={editingName}
-                  autoFocus
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") saveRename();
-                    if (e.key === "Escape") setEditingId(null);
-                  }}
-                />
-                <div className="flex gap-2">
-                  <button type="button" className="flex-1 rounded-xl border" onClick={() => setEditingId(null)}>
-                    取消
-                  </button>
-                  <button type="button" className="flex-1 rounded-xl bg-[#2f6f4e] text-white" onClick={saveRename}>
-                    儲存
-                  </button>
-                </div>
-              </div>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <TextField
+                    autoFocus
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveRename();
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <Button fullWidth variant="outlined" onClick={() => setEditingId(null)}>取消</Button>
+                    <Button fullWidth variant="contained" onClick={saveRename}>儲存</Button>
+                  </Stack>
+                </Stack>
+              </CardContent>
             ) : (
-              <div className="flex items-center justify-between gap-2">
-                <span>
-                  {s.name}
-                  {s.archived ? <span className="ml-2 text-sm text-neutral-500">已停用</span> : null}
-                </span>
-                <span className="flex shrink-0 gap-2">
-                  <button type="button" className="rounded-lg border px-3 text-sm" onClick={() => startRename(s.id, s.name)}>
-                    重新命名
-                  </button>
-                  <button type="button" className="rounded-lg border px-3 text-sm" onClick={() => toggle(s.id)}>
-                    {s.archived ? "啟用" : "停用"}
-                  </button>
-                </span>
-              </div>
+              <>
+                <CardContent sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography sx={{ fontWeight: 500 }}>{s.name}</Typography>
+                  {s.archived ? <Chip size="small" label="已停用" /> : null}
+                </CardContent>
+                <CardActions>
+                  <Button size="small" onClick={() => startRename(s.id, s.name)}>重新命名</Button>
+                  <Button size="small" onClick={() => toggle(s.id)}>{s.archived ? "啟用" : "停用"}</Button>
+                </CardActions>
+              </>
             )}
-          </li>
+          </Card>
         ))}
-      </ul>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 

@@ -1,6 +1,12 @@
 "use client";
 
-import Link from "next/link";
+import Add from "@mui/icons-material/Add";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { formatRoc } from "@/lib/calendar";
 import { formatQty } from "@/lib/money";
@@ -14,34 +20,40 @@ const REASON: Record<string, string> = {
 };
 
 function Body() {
+  const router = useRouter();
   const { ledger } = useLedger();
   const itemName = (id: string) => ledger.items.find((i) => i.id === id)?.name ?? id;
   const rows = [...ledger.stockAdjustments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">庫存調整</h1>
-        <Link href="/adjustments/new/" className="rounded-xl bg-[#2f6f4e] px-4 py-2 text-white">
+    <Stack spacing={2}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h5">庫存調整</Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={() => router.push("/adjustments/new/")}>
           新增調整
-        </Link>
-      </div>
-      <p className="text-sm text-neutral-600">調整是增減量，不是盤後餘額；不計入進貨金額。</p>
-      <div className="space-y-2">
-        {rows.length === 0 ? <p className="text-sm">尚無調整</p> : null}
+        </Button>
+      </Stack>
+      <Typography variant="body2" color="text.secondary">
+        調整是增減量，不是盤後餘額；不計入進貨金額。
+      </Typography>
+      <Stack spacing={1.5}>
+        {rows.length === 0 ? <Typography color="text.secondary">尚無調整</Typography> : null}
         {rows.map((row) => (
-          <article key={row.id} className="rounded-xl border bg-white p-3">
-            <p className="font-medium">
-              {formatRoc(row.date)} · {itemName(row.itemId)}
-              {row.grade ? `／${row.grade}` : ""}
-            </p>
-            <p className="text-sm">
-              {row.qtyInBase > 0 ? "+" : ""}
-              {formatQty(row.qtyInBase)} · {REASON[row.reason]} · {row.note}
-            </p>
-          </article>
+          <Card key={row.id}>
+            <CardContent>
+              <Typography sx={{ fontWeight: 500 }}>
+                {formatRoc(row.date)} · {itemName(row.itemId)}
+                {row.grade ? `／${row.grade}` : ""}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {row.qtyInBase > 0 ? "+" : ""}
+                {formatQty(row.qtyInBase)} · {REASON[row.reason]}
+                {row.note ? ` · ${row.note}` : ""}
+              </Typography>
+            </CardContent>
+          </Card>
         ))}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 

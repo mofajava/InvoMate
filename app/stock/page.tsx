@@ -1,5 +1,17 @@
 "use client";
 
+import Alert from "@mui/material/Alert";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Typography from "@mui/material/Typography";
 import AppShell from "@/components/AppShell";
 import { formatQty } from "@/lib/money";
 import { stockBalances } from "@/lib/stock";
@@ -10,43 +22,48 @@ function Body() {
   const { ledger } = useLedger();
   const rows = stockBalances(ledger.items, ledger.inboundRecords, ledger.stockAdjustments);
   return (
-    <div>
-      <h1 className="mb-3 text-xl font-bold">庫存</h1>
-      <div className="space-y-2 md:hidden">
-        {rows.length === 0 ? <p className="text-sm">尚無庫存</p> : null}
+    <Stack spacing={2}>
+      <Typography variant="h5">庫存</Typography>
+      <Stack spacing={1.5} sx={{ display: { md: "none" } }}>
+        {rows.length === 0 ? <Typography color="text.secondary">尚無庫存</Typography> : null}
         {rows.map((row) => (
-          <article key={`${row.itemId}-${row.grade}`} className="flex items-center justify-between rounded-xl border bg-white p-3">
-            <div>
-              <p className="font-medium">{row.itemName}</p>
-              <p className="text-sm text-neutral-600">{row.grade || "未分級"}</p>
-            </div>
-            <p className={row.balance < 0 ? "font-bold text-red-700" : "font-bold"}>
-              {formatQty(row.balance)} {UNIT_LABEL[row.baseUnit]}
-            </p>
-          </article>
-        ))}
-      </div>
-      <table className="hidden min-w-full bg-white text-sm md:table">
-        <thead>
-          <tr className="border-b text-left">
-            <th className="px-2 py-2">品項</th>
-            <th className="px-2 py-2">品級</th>
-            <th className="px-2 py-2">餘額</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.itemId}-${row.grade}`} className="border-b">
-              <td className="px-2 py-2">{row.itemName}</td>
-              <td className="px-2 py-2">{row.grade || "未分級"}</td>
-              <td className={`px-2 py-2 ${row.balance < 0 ? "text-red-700" : ""}`}>
+          <Card key={`${row.itemId}-${row.grade}`}>
+            <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <Typography sx={{ fontWeight: 500 }}>{row.itemName}</Typography>
+                <Typography variant="body2" color="text.secondary">{row.grade || "未分級"}</Typography>
+              </div>
+              <Typography sx={{ fontWeight: 600, color: row.balance < 0 ? "error.main" : "text.primary" }}>
                 {formatQty(row.balance)} {UNIT_LABEL[row.baseUnit]}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </Typography>
+            </CardContent>
+          </Card>
+        ))}
+      </Stack>
+      <TableContainer component={Paper} variant="outlined" sx={{ display: { xs: "none", md: "block" } }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>品項</TableCell>
+              <TableCell>品級</TableCell>
+              <TableCell>餘額</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={`${row.itemId}-${row.grade}`} hover>
+                <TableCell>{row.itemName}</TableCell>
+                <TableCell>{row.grade || "未分級"}</TableCell>
+                <TableCell sx={{ color: row.balance < 0 ? "error.main" : "inherit" }}>
+                  {formatQty(row.balance)} {UNIT_LABEL[row.baseUnit]}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {rows.some((row) => row.balance < 0) ? <Alert severity="warning">有品項庫存為負，請核對進貨或調整。</Alert> : null}
+    </Stack>
   );
 }
 

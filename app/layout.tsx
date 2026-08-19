@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_TC } from "next/font/google";
+import ThemeRegistry from "@/components/ThemeRegistry";
 import "./globals.css";
 
 const notoSansTc = Noto_Sans_TC({
@@ -21,7 +22,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-Hant">
-      <body className={`${notoSansTc.className} min-h-screen pb-20 md:pb-0`}>{children}</body>
+      <body className={notoSansTc.className}>
+        <ThemeRegistry>{children}</ThemeRegistry>
+      </body>
     </html>
   );
 }

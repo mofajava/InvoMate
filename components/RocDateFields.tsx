@@ -1,5 +1,8 @@
 "use client";
 
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { isoToRoc, rocToIso, todayRoc } from "@/lib/calendar";
 
 type Props = {
@@ -27,37 +30,32 @@ export default function RocDateFields({ iso, onChange, error }: Props) {
   }
 
   return (
-    <div>
-      <div className="grid grid-cols-3 gap-2">
-        <label className="block text-sm">
-          民國年
-          <input
-            className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-2"
-            inputMode="numeric"
-            value={roc.year}
-            onChange={(e) => update({ year: Number(e.target.value) || 0 })}
-          />
-        </label>
-        <label className="block text-sm">
-          月
-          <input
-            className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-2"
-            inputMode="numeric"
-            value={roc.month}
-            onChange={(e) => update({ month: Number(e.target.value) || 0 })}
-          />
-        </label>
-        <label className="block text-sm">
-          日
-          <input
-            className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-2"
-            inputMode="numeric"
-            value={roc.day}
-            onChange={(e) => update({ day: Number(e.target.value) || 0 })}
-          />
-        </label>
-      </div>
-      {error ? <p className="mt-1 text-sm text-red-700">{error}</p> : null}
-    </div>
+    <Stack spacing={1}>
+      <Stack direction="row" spacing={1.5}>
+        <TextField
+          label="民國年"
+          value={roc.year}
+          inputMode="numeric"
+          onChange={(e) => update({ year: Number(e.target.value) || 0 })}
+        />
+        <TextField
+          label="月"
+          value={roc.month}
+          inputMode="numeric"
+          onChange={(e) => update({ month: Number(e.target.value) || 0 })}
+        />
+        <TextField
+          label="日"
+          value={roc.day}
+          inputMode="numeric"
+          onChange={(e) => update({ day: Number(e.target.value) || 0 })}
+        />
+      </Stack>
+      {error ? (
+        <Typography variant="caption" color="error">
+          {error}
+        </Typography>
+      ) : null}
+    </Stack>
   );
 }
