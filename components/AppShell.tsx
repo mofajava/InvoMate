@@ -28,7 +28,7 @@ function saveLabel(status: string, lastSavedAt: string | null) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { ready, bootstrap, token, profile, signIn, signOut, enterLocalPreview, saveStatus, saveError, lastSavedAt, usingLocalFallback, saveNow } =
+  const { ready, bootstrap, token, profile, signIn, signOut, saveStatus, saveError, lastSavedAt, saveNow } =
     useLedger();
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <p className="p-6">載入中…</p>;
   }
 
-  const signedIn = usingLocalFallback || Boolean(token);
+  const signedIn = Boolean(token);
 
   if (!signedIn) {
     const configured = isGoogleConfigured();
@@ -85,13 +85,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         >
           {configured ? "使用 Google 授權雲端硬碟" : "請先完成上方設定"}
         </button>
-        <button
-          type="button"
-          className="text-sm text-neutral-600 underline"
-          onClick={() => void enterLocalPreview()}
-        >
-          先在本機試用（不會存到雲端）
-        </button>
       </main>
     );
   }
@@ -103,9 +96,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div>
             <p className="text-base font-bold">InvoMate</p>
             <p className="text-xs text-neutral-600">
-              {usingLocalFallback ? "本機預覽（未設定 Google）" : profile?.email}
-              {usingLocalFallback ? null : ` · ${saveLabel(saveStatus, lastSavedAt)}`}
-              {usingLocalFallback ? ` · ${saveLabel(saveStatus, lastSavedAt)}` : null}
+              {profile?.email}
+              {` · ${saveLabel(saveStatus, lastSavedAt)}`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -114,23 +106,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 重試儲存
               </button>
             ) : null}
-            {usingLocalFallback ? (
-              <button type="button" className="rounded-lg border border-stone-300 px-3 text-sm" onClick={signOut}>
-                改用 Google
-              </button>
-            ) : (
-              <button type="button" className="rounded-lg border border-stone-300 px-3 text-sm" onClick={signOut}>
-                登出
-              </button>
-            )}
+            <button type="button" className="rounded-lg border border-stone-300 px-3 text-sm" onClick={signOut}>
+              登出
+            </button>
           </div>
         </div>
         {saveError ? <p className="px-4 pb-2 text-sm text-red-700">{saveError}</p> : null}
-        {usingLocalFallback ? (
-          <p className="px-4 pb-2 text-xs text-amber-800">資料只存在這個瀏覽器。設定 Google 用戶端後即可存到雲端硬碟。</p>
-        ) : (
-          <p className="px-4 pb-2 text-xs text-neutral-500">請勿兩台裝置同時記帳，後寫會蓋前寫。</p>
-        )}
+        <p className="px-4 pb-2 text-xs text-neutral-500">請勿兩台裝置同時記帳，後寫會蓋前寫。</p>
         <nav className="hidden gap-1 px-2 pb-2 md:flex">
           {NAV.map((item) => {
             const active = pathname.startsWith(item.href.replace(/\/$/, ""));

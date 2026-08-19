@@ -13,7 +13,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-開 http://localhost:3000 會先請你用 Google 授權雲端硬碟（瀏覽器規定要點一次按鈕，授權視窗不能自動跳出）。尚未設定用戶端 ID 時，畫面會說明設定步驟，並可選「先在本機試用」。
+開 http://localhost:3000 會先請你用 Google 授權雲端硬碟（瀏覽器規定要點一次按鈕，授權視窗不能自動跳出）。尚未設定用戶端 ID 時，畫面會說明設定步驟。
 
 ```bash
 npm test

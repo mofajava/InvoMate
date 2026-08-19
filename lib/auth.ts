@@ -45,19 +45,6 @@ export function isGoogleConfigured(): boolean {
   return googleClientId().length > 0;
 }
 
-const LOCAL_PREVIEW_KEY = "invomate.localPreview";
-
-export function isLocalPreviewChosen(): boolean {
-  if (typeof window === "undefined") return false;
-  return sessionStorage.getItem(LOCAL_PREVIEW_KEY) === "1";
-}
-
-export function setLocalPreviewChosen(on: boolean): void {
-  if (typeof window === "undefined") return;
-  if (on) sessionStorage.setItem(LOCAL_PREVIEW_KEY, "1");
-  else sessionStorage.removeItem(LOCAL_PREVIEW_KEY);
-}
-
 export function loadStoredToken(): string | null {
   if (typeof window === "undefined") return null;
   const token = sessionStorage.getItem(TOKEN_KEY);
@@ -132,10 +119,8 @@ export async function requestGoogleToken(prompt: "" | "consent" = "consent"): Pr
   await loadGisScript();
   const clientId = googleClientId();
   if (!clientId) throw new Error("尚未設定 NEXT_PUBLIC_GOOGLE_CLIENT_ID");
-  const existing = loadStoredToken();
-  if (existing) {
-    signOutGoogle(existing);
-  }
+  // 只清本機，不要 revoke：撤銷會把同一個 OAuth 用戶端剛發出的新 token 一起作廢。
+  clearAuthStorage();
   return new Promise((resolve, reject) => {
     const client = window.google!.accounts.oauth2.initTokenClient({
       client_id: clientId,

@@ -4,13 +4,10 @@ import { create } from "zustand";
 import type { GoogleProfile } from "./auth";
 import {
   fetchProfile,
-  isGoogleConfigured,
-  isLocalPreviewChosen,
   loadStoredProfile,
   loadStoredToken,
   persistProfile,
   requestGoogleToken,
-  setLocalPreviewChosen,
   signOutGoogle,
   tokenHasDriveScope,
 } from "./auth";
@@ -27,9 +24,7 @@ type LedgerStore = {
   profile: GoogleProfile | null;
   handle: LedgerHandle | null;
   ledger: Ledger;
-  usingLocalFallback: boolean;
   signIn: () => Promise<void>;
-  enterLocalPreview: () => Promise<void>;
   signOut: () => void;
   bootstrap: () => Promise<void>;
   updateLedger: (updater: (current: Ledger) => Ledger) => void;
@@ -66,26 +61,12 @@ export const useLedger = create<LedgerStore>((set, get) => ({
   profile: null,
   handle: null,
   ledger: createEmptyLedger(),
-  usingLocalFallback: false,
 
   bootstrap: async () => {
     const token = loadStoredToken();
     const profile = loadStoredProfile();
-    if (isLocalPreviewChosen() && !token) {
-      const loaded = await loadOrCreateLedger(null);
-      set({
-        ready: true,
-        token: null,
-        profile: null,
-        handle: loaded.handle,
-        ledger: loaded.ledger,
-        usingLocalFallback: true,
-        saveStatus: "saved",
-      });
-      return;
-    }
     if (!token) {
-      set({ ready: true, token: null, profile, usingLocalFallback: false });
+      set({ ready: true, token: null, profile });
       return;
     }
     set({ saveStatus: "loading" });
@@ -97,11 +78,11 @@ export const useLedger = create<LedgerStore>((set, get) => ({
         profile,
         handle: loaded.handle,
         ledger: loaded.ledger,
-        usingLocalFallback: false,
         saveStatus: "saved",
         lastSavedAt: loaded.ledger.updatedAt,
       });
     } catch {
+      signOutGoogle(null);
       set({ ready: true, token: null, profile: null, saveStatus: "idle" });
     }
   },
@@ -114,7 +95,6 @@ export const useLedger = create<LedgerStore>((set, get) => ({
     }
     const profile = await fetchProfile(token);
     persistProfile(profile);
-    setLocalPreviewChosen(false);
     const loaded = await loadOrCreateLedger(token);
     set({
       ready: true,
@@ -122,29 +102,13 @@ export const useLedger = create<LedgerStore>((set, get) => ({
       profile,
       handle: loaded.handle,
       ledger: loaded.ledger,
-      usingLocalFallback: false,
       saveStatus: "saved",
       lastSavedAt: loaded.ledger.updatedAt,
     });
   },
 
-  enterLocalPreview: async () => {
-    setLocalPreviewChosen(true);
-    const loaded = await loadOrCreateLedger(null);
-    set({
-      ready: true,
-      token: null,
-      profile: null,
-      handle: loaded.handle,
-      ledger: loaded.ledger,
-      usingLocalFallback: true,
-      saveStatus: "saved",
-    });
-  },
-
   signOut: () => {
     signOutGoogle(get().token);
-    setLocalPreviewChosen(false);
     if (saveTimer) clearTimeout(saveTimer);
     pending = null;
     set({
@@ -154,7 +118,6 @@ export const useLedger = create<LedgerStore>((set, get) => ({
       ledger: createEmptyLedger(),
       saveStatus: "idle",
       lastSavedAt: null,
-      usingLocalFallback: false,
     });
   },
 

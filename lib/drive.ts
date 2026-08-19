@@ -20,8 +20,11 @@ async function driveFetch(token: string, url: string, init: RequestInit = {}) {
   });
   if (!res.ok) {
     const text = await res.text();
+    if (res.status === 401) {
+      throw new Error("Google 登入已失效。請再按一次「使用 Google 授權雲端硬碟」。");
+    }
     if (res.status === 403 && text.includes("insufficient")) {
-      throw new Error("雲端硬碟權限不足。請登出後再按「使用 Google 授權雲端硬碟」，並在視窗中允許存取 Drive。");
+      throw new Error("雲端硬碟權限不足。請再按一次「使用 Google 授權雲端硬碟」，並在視窗中允許存取 Drive。");
     }
     throw new Error(`Drive API ${res.status}: ${text}`);
   }

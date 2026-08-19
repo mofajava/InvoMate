@@ -41,7 +41,7 @@ export default function ExportDialog({ query }: Props) {
           window.open(uploaded.webViewLink, "_blank");
         }
       } else if (toDrive && (!token || handle?.folderId === "local")) {
-        setMessage("本機預覽無法上傳 Drive，已改為僅下載");
+        setMessage("無法上傳雲端硬碟，已改為僅下載");
       } else {
         setMessage("已完成");
       }
