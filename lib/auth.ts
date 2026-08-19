@@ -16,7 +16,13 @@ declare global {
           initTokenClient: (config: {
             client_id: string;
             scope: string;
-            callback: (response: { access_token?: string; expires_in?: number; error?: string }) => void;
+            include_granted_scopes?: boolean;
+            callback: (response: {
+              access_token?: string;
+              expires_in?: number;
+              error?: string;
+              scope?: string;
+            }) => void;
           }) => { requestAccessToken: (opts?: { prompt?: string }) => void };
           revoke: (token: string, done: () => void) => void;
         };
@@ -114,24 +120,41 @@ export async function fetchProfile(accessToken: string): Promise<GoogleProfile> 
   return { email: data.email, name: data.name, picture: data.picture };
 }
 
-export async function requestGoogleToken(prompt: "" | "consent" = ""): Promise<string> {
+export async function tokenHasDriveScope(accessToken: string): Promise<boolean> {
+  const res = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
+  if (!res.ok) return false;
+  const data = (await res.json()) as { scope?: string };
+  const scopes = (data.scope ?? "").split(/\s+/);
+  return scopes.some((scope) => scope.includes("drive.file") || scope.endsWith("/auth/drive"));
+}
+
+export async function requestGoogleToken(prompt: "" | "consent" = "consent"): Promise<string> {
   await loadGisScript();
   const clientId = googleClientId();
   if (!clientId) throw new Error("尚未設定 NEXT_PUBLIC_GOOGLE_CLIENT_ID");
+  const existing = loadStoredToken();
+  if (existing) {
+    signOutGoogle(existing);
+  }
   return new Promise((resolve, reject) => {
     const client = window.google!.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: DRIVE_SCOPES,
+      include_granted_scopes: false,
       callback: (response) => {
         if (response.error || !response.access_token) {
-          reject(new Error(response.error || "登入取消"));
+          reject(new Error(response.error === "access_denied" ? "你拒絕了授權，無法使用雲端硬碟" : response.error || "登入取消"));
+          return;
+        }
+        if (response.scope && !response.scope.includes("drive.file")) {
+          reject(new Error("授權裡沒有雲端硬碟權限。請在 Google 視窗允許 Drive，或到 Google 帳號安全性移除這項應用後再登入一次。"));
           return;
         }
         persistToken(response.access_token, response.expires_in ?? 3600);
         resolve(response.access_token);
       },
     });
-    client.requestAccessToken({ prompt: "" });
+    client.requestAccessToken({ prompt });
   });
 }
 

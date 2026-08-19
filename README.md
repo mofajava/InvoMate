@@ -23,12 +23,13 @@ npm run build
 ## 設定 Google 登入（存雲端）
 
 1. 到 [Google Cloud Console](https://console.cloud.google.com/) 建立專案，啟用 **Google Drive API**。
-2. 建立 OAuth 用戶端 ID，類型選「網頁應用程式」。
-3. **授權的 JavaScript 來源** 加上：
+2. OAuth 同意畫面請把範圍加上 `https://www.googleapis.com/auth/drive.file`（測試中可把你的 Gmail 加到測試使用者）。
+3. 建立 OAuth 用戶端 ID，類型選「網頁應用程式」。
+4. **授權的 JavaScript 來源** 加上：
    - `http://localhost:3000`
    - `https://<你的帳號>.github.io`
-4. **授權的重新導向 URI** 可填相同來源（GIS token client 主要看 JavaScript 來源）。
-5. 把用戶端 ID 放到 `.env.local`：
+5. **授權的重新導向 URI** 可填相同來源（GIS token client 主要看 JavaScript 來源）。
+6. 把用戶端 ID 放到 `.env.local`：
 
 ```
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
@@ -54,6 +55,6 @@ GitHub Actions 請把同一個值存成 repo secret：`NEXT_PUBLIC_GOOGLE_CLIENT
 - 庫存與庫存調整
 - 供應商／品項主檔
 - 匯出 xlsx／pdf 到 Drive `InvoMate/exports/` 或下載
-- 進貨頁可「匯入民國114年手記」，或選擇 [resource/ledger-from-data.json](resource/ledger-from-data.json)
+- 進貨頁可從 JSON 檔匯入帳本（會覆蓋目前資料）
 
 請勿兩台裝置同時記帳（後寫會蓋前寫）。

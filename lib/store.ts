@@ -12,6 +12,7 @@ import {
   requestGoogleToken,
   setLocalPreviewChosen,
   signOutGoogle,
+  tokenHasDriveScope,
 } from "./auth";
 import { loadOrCreateLedger, saveLedger, type LedgerHandle } from "./drive";
 import type { Ledger, SaveStatus } from "./types";
@@ -107,7 +108,10 @@ export const useLedger = create<LedgerStore>((set, get) => ({
 
   signIn: async () => {
     set({ saveStatus: "loading", saveError: null });
-    const token = await requestGoogleToken("");
+    const token = await requestGoogleToken("consent");
+    if (!(await tokenHasDriveScope(token))) {
+      throw new Error("授權裡沒有雲端硬碟權限。請在 Google 視窗勾選 Drive，或到 Google 帳號安全性移除這項應用後再登入一次。");
+    }
     const profile = await fetchProfile(token);
     persistProfile(profile);
     setLocalPreviewChosen(false);

@@ -4,11 +4,6 @@ import { useRef, useState } from "react";
 import { parseLedger } from "@/lib/schema";
 import { useLedger } from "@/lib/store";
 
-function importUrl() {
-  const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  return `${base}/imports/ledger-from-data.json`;
-}
-
 export default function ImportLedgerButton() {
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceLedger = useLedger((s) => s.replaceLedger);
@@ -24,18 +19,6 @@ export default function ImportLedgerButton() {
     setMessage(`已匯入 ${ledger.inboundRecords.length} 筆進貨`);
   }
 
-  async function importHandNotes() {
-    if (!confirmReplace()) return;
-    setMessage("匯入中…");
-    try {
-      const res = await fetch(importUrl());
-      if (!res.ok) throw new Error("找不到手記 JSON");
-      await apply(await res.json());
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "匯入失敗");
-    }
-  }
-
   async function onFile(file: File) {
     if (!confirmReplace()) return;
     try {
@@ -48,9 +31,6 @@ export default function ImportLedgerButton() {
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="rounded-lg border px-3" onClick={() => void importHandNotes()}>
-          匯入民國114年手記
-        </button>
         <button type="button" className="rounded-lg border px-3" onClick={() => inputRef.current?.click()}>
           從 JSON 檔匯入
         </button>

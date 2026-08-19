@@ -62,6 +62,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <li>到 Google Cloud Console 建立「網頁應用程式」OAuth 用戶端。</li>
               <li>啟用 Google Drive API。</li>
               <li>
+                OAuth 同意畫面的範圍（Scopes）加上
+                <code className="block mt-1">https://www.googleapis.com/auth/drive.file</code>
+              </li>
+              <li>
                 授權 JavaScript 來源加上 <code>http://localhost:3000</code> 與 GitHub Pages 網址。
               </li>
               <li>
