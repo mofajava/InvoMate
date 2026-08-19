@@ -28,6 +28,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# ledger snapshots (never commit)
+invomate-ledger.json
+
 # vercel
 .vercel
 
