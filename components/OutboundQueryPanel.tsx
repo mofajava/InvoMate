@@ -10,7 +10,8 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { monthRange, todayRoc } from "@/lib/calendar";
+import DateField from "@/components/DateField";
+import { lastMonthRange, thisMonthRange } from "@/lib/calendar";
 import { AR_LABEL } from "@/lib/master";
 import { emptyOutboundQuery, isOutboundQueryActive } from "@/lib/outbound-query";
 import type { Customer, Item, OutboundQuery, Warehouse } from "@/lib/types";
@@ -35,7 +36,6 @@ function isAdvancedActive(query: OutboundQuery): boolean {
 }
 
 export default function OutboundQueryPanel({ query, onChange, customers, items, warehouses }: Props) {
-  const roc = todayRoc();
   const advancedOn = isAdvancedActive(query);
   const finished = items.filter((item) => item.kind === "finished");
 
@@ -116,14 +116,22 @@ export default function OutboundQueryPanel({ query, onChange, customers, items, 
               </Stack>
             </div>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <TextField label="日期起" placeholder="2025-09-01" value={query.dateFrom ?? ""} onChange={(e) => onChange({ ...query, dateFrom: e.target.value || null })} />
-              <TextField label="日期迄" placeholder="2025-09-30" value={query.dateTo ?? ""} onChange={(e) => onChange({ ...query, dateTo: e.target.value || null })} />
+              <DateField
+                label="日期起"
+                value={query.dateFrom ?? ""}
+                onChange={(iso) => onChange({ ...query, dateFrom: iso || null })}
+              />
+              <DateField
+                label="日期迄"
+                value={query.dateTo ?? ""}
+                onChange={(iso) => onChange({ ...query, dateTo: iso || null })}
+              />
             </Stack>
             <Stack direction="row" spacing={1}>
               <Button
                 variant="outlined"
                 onClick={() => {
-                  const range = monthRange(roc.year, roc.month);
+                  const range = thisMonthRange();
                   onChange({ ...query, dateFrom: range.from, dateTo: range.to });
                 }}
               >
@@ -132,9 +140,7 @@ export default function OutboundQueryPanel({ query, onChange, customers, items, 
               <Button
                 variant="outlined"
                 onClick={() => {
-                  const prevMonth = roc.month === 1 ? 12 : roc.month - 1;
-                  const prevYear = roc.month === 1 ? roc.year - 1 : roc.year;
-                  const range = monthRange(prevYear, prevMonth);
+                  const range = lastMonthRange();
                   onChange({ ...query, dateFrom: range.from, dateTo: range.to });
                 }}
               >

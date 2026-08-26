@@ -8,7 +8,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import RocDateFields from "@/components/RocDateFields";
+import DateField from "@/components/DateField";
 import { isValidIsoDate, todayIso } from "@/lib/calendar";
 import { defaultFinishedItemId } from "@/lib/master";
 import { formatQty } from "@/lib/money";
@@ -80,7 +80,7 @@ export default function TransferForm() {
   return (
     <Stack component="form" spacing={2} sx={{ maxWidth: 560, mx: "auto" }} onSubmit={submit}>
       <Typography variant="h5">新增調撥</Typography>
-      <RocDateFields iso={isValidIsoDate(date) ? date : todayIso()} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
+      <DateField value={date} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
       <TextField
         select
         label="成品"

@@ -14,7 +14,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import RocDateFields from "@/components/RocDateFields";
+import DateField from "@/components/DateField";
 import { isValidIsoDate, todayIso } from "@/lib/calendar";
 import { AR_LABEL, defaultFinishedItemId } from "@/lib/master";
 import { computedAmount, formatMoney, formatQty } from "@/lib/money";
@@ -194,8 +194,8 @@ export default function OutboundForm({ editId }: Props) {
     <>
     <Stack component="form" spacing={2} sx={{ maxWidth: 560, mx: "auto" }} onSubmit={submit}>
       <Typography variant="h5">{existing ? "編輯出貨" : "新增出貨"}</Typography>
-      <RocDateFields iso={isValidIsoDate(date) ? date : "2025-01-01"} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
-      <Stack direction="row" spacing={1} sx={{ alignItems: "stretch" }}>
+      <DateField value={date} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
         <TextField
           select
           label="客戶"
@@ -223,10 +223,13 @@ export default function OutboundForm({ editId }: Props) {
           aria-label="新增客戶"
           onClick={openAddCustomer}
           sx={{
-            alignSelf: "stretch",
-            aspectRatio: "1 / 1",
-            width: "auto",
-            minWidth: 0,
+            flex: "0 0 40px",
+            width: 40,
+            height: 40,
+            minWidth: 40,
+            minHeight: 40,
+            maxWidth: 40,
+            maxHeight: 40,
             p: 0,
             border: 1,
             borderColor: "divider",

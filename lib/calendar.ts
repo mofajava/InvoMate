@@ -40,17 +40,23 @@ export function isoToRoc(iso: string): { year: number; month: number; day: numbe
 }
 
 export function isValidIsoDate(iso: string): boolean {
-  try {
-    isoToRoc(iso);
-    return true;
-  } catch {
-    return false;
-  }
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+export function formatDate(iso: string): string {
+  if (!isValidIsoDate(iso)) return iso;
+  const [year, month, day] = iso.split("-");
+  return `${year}/${month}/${day}`;
 }
 
 export function formatRoc(iso: string): string {
-  const { year, month, day } = isoToRoc(iso);
-  return `${year}/${month}/${day}`;
+  return formatDate(iso);
 }
 
 export function todayIso(): string {
@@ -78,3 +84,23 @@ export function monthRange(rocYear: number, month: number): { from: string; to: 
     to: rocToIso(rocYear, month, last),
   };
 }
+
+export function gregorianMonthRange(year: number, month: number): { from: string; to: string } {
+  const last = new Date(year, month, 0).getDate();
+  return {
+    from: `${year}-${String(month).padStart(2, "0")}-01`,
+    to: `${year}-${String(month).padStart(2, "0")}-${String(last).padStart(2, "0")}`,
+  };
+}
+
+export function thisMonthRange(): { from: string; to: string } {
+  const now = new Date();
+  return gregorianMonthRange(now.getFullYear(), now.getMonth() + 1);
+}
+
+export function lastMonthRange(): { from: string; to: string } {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return gregorianMonthRange(prev.getFullYear(), prev.getMonth() + 1);
+}
+

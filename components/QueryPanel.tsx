@@ -11,8 +11,9 @@ import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import DateField from "@/components/DateField";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import { monthRange, todayRoc } from "@/lib/calendar";
+import { lastMonthRange, thisMonthRange } from "@/lib/calendar";
 import { emptyQuery, isQueryActive } from "@/lib/query";
 import type { InboundQuery, Item, Supplier } from "@/lib/types";
 
@@ -40,7 +41,6 @@ function isAdvancedActive(query: InboundQuery): boolean {
 }
 
 export default function QueryPanel({ query, onChange, suppliers, items }: Props) {
-  const roc = todayRoc();
   const advancedOn = isAdvancedActive(query);
 
   function toggle(list: string[], id: string): string[] {
@@ -143,24 +143,22 @@ export default function QueryPanel({ query, onChange, suppliers, items }: Props)
             </Stack>
           </div>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField
+            <DateField
               label="日期起"
-              placeholder="2025-09-01"
               value={query.dateFrom ?? ""}
-              onChange={(e) => onChange({ ...query, dateFrom: e.target.value || null })}
+              onChange={(iso) => onChange({ ...query, dateFrom: iso || null })}
             />
-            <TextField
+            <DateField
               label="日期迄"
-              placeholder="2025-09-30"
               value={query.dateTo ?? ""}
-              onChange={(e) => onChange({ ...query, dateTo: e.target.value || null })}
+              onChange={(iso) => onChange({ ...query, dateTo: iso || null })}
             />
           </Stack>
           <Stack direction="row" spacing={1}>
             <Button
               variant="outlined"
               onClick={() => {
-                const range = monthRange(roc.year, roc.month);
+                const range = thisMonthRange();
                 onChange({ ...query, dateFrom: range.from, dateTo: range.to });
               }}
             >
@@ -169,9 +167,7 @@ export default function QueryPanel({ query, onChange, suppliers, items }: Props)
             <Button
               variant="outlined"
               onClick={() => {
-                const prevMonth = roc.month === 1 ? 12 : roc.month - 1;
-                const prevYear = roc.month === 1 ? roc.year - 1 : roc.year;
-                const range = monthRange(prevYear, prevMonth);
+                const range = lastMonthRange();
                 onChange({ ...query, dateFrom: range.from, dateTo: range.to });
               }}
             >

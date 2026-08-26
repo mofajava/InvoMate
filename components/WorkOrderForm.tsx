@@ -13,7 +13,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import RocDateFields from "@/components/RocDateFields";
+import DateField from "@/components/DateField";
 import { isValidIsoDate, todayIso } from "@/lib/calendar";
 import { defaultFinishedItemId } from "@/lib/master";
 import { formatQty } from "@/lib/money";
@@ -136,7 +136,7 @@ export default function WorkOrderForm({ editId }: Props) {
   return (
     <Stack component="form" spacing={2} sx={{ maxWidth: 560, mx: "auto" }} onSubmit={submit}>
       <Typography variant="h5">{existing ? "編輯加工單" : "新增加工單"}</Typography>
-      <RocDateFields iso={isValidIsoDate(date) ? date : todayIso()} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
+      <DateField value={date} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
       <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>耗用原料</Typography>
       {consumes.map((row, index) => {
         const item = ledger.items.find((i) => i.id === row.itemId);

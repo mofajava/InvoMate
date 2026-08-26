@@ -8,7 +8,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import RocDateFields from "@/components/RocDateFields";
+import DateField from "@/components/DateField";
 import { isValidIsoDate, todayIso } from "@/lib/calendar";
 import { buildInbound, lastPrice } from "@/lib/inbound";
 import { computedAmount, formatMoney } from "@/lib/money";
@@ -164,7 +164,7 @@ export default function InboundForm({ editId }: Props) {
   return (
     <Stack component="form" spacing={2} sx={{ maxWidth: 560, mx: "auto" }} onSubmit={submit}>
       <Typography variant="h5">{existing ? "編輯進貨" : "新增進貨"}</Typography>
-      <RocDateFields iso={isValidIsoDate(date) ? date : "2025-01-01"} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
+      <DateField value={date} onChange={setDate} error={!isValidIsoDate(date) ? "日期無效" : undefined} />
       <TextField
         select
         label="供應商"

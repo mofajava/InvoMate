@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { InvalidDateError, rocToIso, isoToRoc } from "./calendar";
+import { InvalidDateError, formatDate, isValidIsoDate, rocToIso, isoToRoc } from "./calendar";
 import { computedAmount } from "./money";
 import { qtyInBase } from "./units";
 import { createEmptyLedger, SEED_IDS } from "./seed";
@@ -22,6 +22,12 @@ describe("calendar", () => {
 
   it("rejects non-leap Feb 29", () => {
     expect(() => rocToIso(114, 2, 29)).toThrow(InvalidDateError);
+  });
+
+  it("validates Gregorian ISO dates", () => {
+    expect(isValidIsoDate("2025-12-04")).toBe(true);
+    expect(isValidIsoDate("2025-12-38")).toBe(false);
+    expect(formatDate("2025-12-04")).toBe("2025/12/04");
   });
 });
 
