@@ -38,7 +38,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { isGoogleConfigured, isOfflineDev } from "@/lib/auth";
+import { hasGrantedDrive, isGoogleConfigured, isOfflineDev } from "@/lib/auth";
 import { useLedger } from "@/lib/store";
 
 const DRAWER_WIDTH = 280;
@@ -154,7 +154,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </Typography>
                 {configured ? (
                   <Typography color="text.secondary">
-                    瀏覽器規定授權視窗必須由你點一下才會出現，請按下方按鈕。
+                    第一次請允許雲端硬碟。之後同一瀏覽器會記住登入；若過期再點一次即可，不必每次重勾權限。
                   </Typography>
                 ) : (
                   <Alert severity="warning" sx={{ textAlign: "left", width: "100%" }}>
@@ -173,7 +173,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     void signIn().catch((err: Error) => setSignInError(err.message))
                   }
                 >
-                  {configured ? "使用 Google 授權雲端硬碟" : "請先完成設定"}
+                  {configured ? (hasGrantedDrive() ? "繼續使用 Google 雲端硬碟" : "使用 Google 授權雲端硬碟") : "請先完成設定"}
                 </Button>
               </Stack>
             </CardContent>

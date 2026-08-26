@@ -44,7 +44,7 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
 
 GitHub Actions 請把同一個值存成 repo secret：`NEXT_PUBLIC_GOOGLE_CLIENT_ID`。
 
-授權範圍為 `drive.file`：只能讀寫本 App 建立的檔，不是整個硬碟。
+授權範圍為 `drive.file`：只能讀寫本 App 建立的檔，不是整個硬碟。第一次授權後，同一瀏覽器會把登入記在本機；Google 的 access token 約一小時過期，App 會在背景嘗試換新，關掉再開通常不必重勾權限。
 
 ## 部署 GitHub Pages
 

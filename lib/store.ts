@@ -4,13 +4,18 @@ import { create } from "zustand";
 import type { GoogleProfile } from "./auth";
 import {
   fetchProfile,
+  hasGrantedDrive,
   isOfflineDev,
   loadStoredProfile,
   loadStoredToken,
+  loadTokenExpiry,
+  markDriveGranted,
   persistProfile,
   requestGoogleToken,
   signOutGoogle,
   tokenHasDriveScope,
+  trySilentGoogleToken,
+  clearAuthStorage,
 } from "./auth";
 import { loadOrCreateLedger, saveLedger, type LedgerHandle } from "./drive";
 import { createEmptyLedger } from "./seed";
@@ -36,7 +41,35 @@ type LedgerStore = {
 };
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let pending: Ledger | null = null;
+
+function clearRefreshTimer() {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = null;
+}
+
+function armTokenRefresh(
+  get: () => LedgerStore,
+  set: (partial: Partial<LedgerStore>) => void,
+) {
+  clearRefreshTimer();
+  const exp = loadTokenExpiry();
+  if (!exp || get().offline) return;
+  const delay = Math.min(Math.max(exp - Date.now() - 90_000, 15_000), 50 * 60 * 1000);
+  refreshTimer = setTimeout(() => {
+    void (async () => {
+      try {
+        const token = await trySilentGoogleToken();
+        if (!token || !(await tokenHasDriveScope(token))) return;
+        set({ token });
+        armTokenRefresh(get, set);
+      } catch {
+        /* 目前 token 還能用就先留著 */
+      }
+    })();
+  }, delay);
+}
 
 async function flushSave(get: () => LedgerStore, set: (partial: Partial<LedgerStore>) => void) {
   const { token, handle, offline } = get();
@@ -87,10 +120,37 @@ export const useLedger = create<LedgerStore>((set, get) => ({
       });
       return;
     }
-    const token = loadStoredToken();
     const profile = loadStoredProfile();
+    let token = loadStoredToken();
+    if (!token && hasGrantedDrive()) {
+      set({ saveStatus: "loading" });
+      token = await trySilentGoogleToken();
+      if (token && !(await tokenHasDriveScope(token))) token = null;
+      if (token) {
+        try {
+          const nextProfile = profile ?? (await fetchProfile(token));
+          persistProfile(nextProfile);
+          markDriveGranted();
+          const loaded = await loadOrCreateLedger(token);
+          set({
+            ready: true,
+            token,
+            profile: nextProfile,
+            handle: loaded.handle,
+            ledger: loaded.ledger,
+            saveStatus: "saved",
+            lastSavedAt: loaded.ledger.updatedAt,
+            offline: false,
+          });
+          armTokenRefresh(get, set);
+          return;
+        } catch {
+          token = null;
+        }
+      }
+    }
     if (!token) {
-      set({ ready: true, token: null, profile, offline: false });
+      set({ ready: true, token: null, profile, offline: false, saveStatus: "idle" });
       return;
     }
     set({ saveStatus: "loading" });
@@ -106,34 +166,46 @@ export const useLedger = create<LedgerStore>((set, get) => ({
         lastSavedAt: loaded.ledger.updatedAt,
         offline: false,
       });
+      armTokenRefresh(get, set);
     } catch {
-      signOutGoogle(null);
+      clearAuthStorage();
       set({ ready: true, token: null, profile: null, saveStatus: "idle", offline: false });
     }
   },
 
   signIn: async () => {
     set({ saveStatus: "loading", saveError: null });
-    const token = await requestGoogleToken("consent");
-    if (!(await tokenHasDriveScope(token))) {
-      throw new Error("授權裡沒有雲端硬碟權限。請在 Google 視窗勾選 Drive，或到 Google 帳號安全性移除這項應用後再登入一次。");
+    try {
+      let token = await requestGoogleToken(hasGrantedDrive() ? "" : "consent");
+      if (!(await tokenHasDriveScope(token))) {
+        token = await requestGoogleToken("consent");
+        if (!(await tokenHasDriveScope(token))) {
+          throw new Error("授權裡沒有雲端硬碟權限。請在 Google 視窗勾選 Drive，或到 Google 帳號安全性移除這項應用後再登入一次。");
+        }
+      }
+      const profile = await fetchProfile(token);
+      persistProfile(profile);
+      markDriveGranted();
+      const loaded = await loadOrCreateLedger(token);
+      set({
+        ready: true,
+        token,
+        profile,
+        handle: loaded.handle,
+        ledger: loaded.ledger,
+        saveStatus: "saved",
+        lastSavedAt: loaded.ledger.updatedAt,
+        offline: false,
+      });
+      armTokenRefresh(get, set);
+    } catch (error) {
+      set({ saveStatus: "idle" });
+      throw error;
     }
-    const profile = await fetchProfile(token);
-    persistProfile(profile);
-    const loaded = await loadOrCreateLedger(token);
-    set({
-      ready: true,
-      token,
-      profile,
-      handle: loaded.handle,
-      ledger: loaded.ledger,
-      saveStatus: "saved",
-      lastSavedAt: loaded.ledger.updatedAt,
-      offline: false,
-    });
   },
 
   signOut: () => {
+    clearRefreshTimer();
     signOutGoogle(get().token);
     if (saveTimer) clearTimeout(saveTimer);
     pending = null;

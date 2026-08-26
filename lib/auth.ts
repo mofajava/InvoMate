@@ -1,12 +1,15 @@
 const TOKEN_KEY = "invomate.google.token";
 const TOKEN_EXP_KEY = "invomate.google.tokenExp";
 const PROFILE_KEY = "invomate.google.profile";
+const GRANTED_KEY = "invomate.google.granted";
 
 export type GoogleProfile = {
   email: string;
   name: string;
   picture?: string;
 };
+
+type TokenPrompt = "" | "consent" | "none";
 
 declare global {
   interface Window {
@@ -50,38 +53,68 @@ export function isOfflineDev(): boolean {
   return process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_DEV_GOOGLE !== "1";
 }
 
-export function loadStoredToken(): string | null {
+function readKey(key: string): string | null {
   if (typeof window === "undefined") return null;
-  const token = sessionStorage.getItem(TOKEN_KEY);
-  const exp = Number(sessionStorage.getItem(TOKEN_EXP_KEY) ?? 0);
+  return localStorage.getItem(key) ?? sessionStorage.getItem(key);
+}
+
+function writeKey(key: string, value: string): void {
+  localStorage.setItem(key, value);
+  sessionStorage.removeItem(key);
+}
+
+function removeKey(key: string): void {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+}
+
+export function hasGrantedDrive(): boolean {
+  return readKey(GRANTED_KEY) === "1";
+}
+
+export function markDriveGranted(): void {
+  writeKey(GRANTED_KEY, "1");
+}
+
+export function loadTokenExpiry(): number {
+  return Number(readKey(TOKEN_EXP_KEY) ?? 0);
+}
+
+export function loadStoredToken(): string | null {
+  const token = readKey(TOKEN_KEY);
+  const exp = loadTokenExpiry();
   if (!token || Date.now() > exp - 30_000) return null;
+  if (!localStorage.getItem(TOKEN_KEY)) {
+    persistToken(token, Math.max(1, Math.round((exp - Date.now()) / 1000)));
+  }
   return token;
 }
 
 export function loadStoredProfile(): GoogleProfile | null {
-  if (typeof window === "undefined") return null;
-  const raw = sessionStorage.getItem(PROFILE_KEY);
+  const raw = readKey(PROFILE_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as GoogleProfile;
+    const profile = JSON.parse(raw) as GoogleProfile;
+    if (!localStorage.getItem(PROFILE_KEY)) persistProfile(profile);
+    return profile;
   } catch {
     return null;
   }
 }
 
 export function persistToken(token: string, expiresIn: number): void {
-  sessionStorage.setItem(TOKEN_KEY, token);
-  sessionStorage.setItem(TOKEN_EXP_KEY, String(Date.now() + expiresIn * 1000));
+  writeKey(TOKEN_KEY, token);
+  writeKey(TOKEN_EXP_KEY, String(Date.now() + expiresIn * 1000));
 }
 
 export function persistProfile(profile: GoogleProfile): void {
-  sessionStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  writeKey(PROFILE_KEY, JSON.stringify(profile));
 }
 
 export function clearAuthStorage(): void {
-  sessionStorage.removeItem(TOKEN_KEY);
-  sessionStorage.removeItem(TOKEN_EXP_KEY);
-  sessionStorage.removeItem(PROFILE_KEY);
+  removeKey(TOKEN_KEY);
+  removeKey(TOKEN_EXP_KEY);
+  removeKey(PROFILE_KEY);
 }
 
 export function loadGisScript(): Promise<void> {
@@ -120,20 +153,25 @@ export async function tokenHasDriveScope(accessToken: string): Promise<boolean> 
   return scopes.some((scope) => scope.includes("drive.file") || scope.endsWith("/auth/drive"));
 }
 
-export async function requestGoogleToken(prompt: "" | "consent" = "consent"): Promise<string> {
+export async function requestGoogleToken(prompt: TokenPrompt = ""): Promise<string> {
   await loadGisScript();
   const clientId = googleClientId();
   if (!clientId) throw new Error("尚未設定 NEXT_PUBLIC_GOOGLE_CLIENT_ID");
-  // 只清本機，不要 revoke：撤銷會把同一個 OAuth 用戶端剛發出的新 token 一起作廢。
-  clearAuthStorage();
   return new Promise((resolve, reject) => {
     const client = window.google!.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: DRIVE_SCOPES,
-      include_granted_scopes: false,
+      include_granted_scopes: true,
       callback: (response) => {
         if (response.error || !response.access_token) {
-          reject(new Error(response.error === "access_denied" ? "你拒絕了授權，無法使用雲端硬碟" : response.error || "登入取消"));
+          const denied = response.error === "access_denied";
+          reject(
+            new Error(
+              denied
+                ? "你拒絕了授權，無法使用雲端硬碟"
+                : response.error || "登入取消",
+            ),
+          );
           return;
         }
         if (response.scope && !response.scope.includes("drive.file")) {
@@ -148,9 +186,23 @@ export async function requestGoogleToken(prompt: "" | "consent" = "consent"): Pr
   });
 }
 
+export async function trySilentGoogleToken(): Promise<string | null> {
+  try {
+    return await Promise.race([
+      requestGoogleToken("none"),
+      new Promise<string>((_, reject) => {
+        setTimeout(() => reject(new Error("silent-timeout")), 6000);
+      }),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
 export function signOutGoogle(token: string | null): void {
   if (token && window.google?.accounts.oauth2) {
     window.google.accounts.oauth2.revoke(token, () => undefined);
   }
   clearAuthStorage();
+  removeKey(GRANTED_KEY);
 }
