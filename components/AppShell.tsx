@@ -101,8 +101,21 @@ function currentLabel(pathname: string) {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { ready, bootstrap, token, profile, signIn, signOut, saveStatus, saveError, lastSavedAt, saveNow, offline } =
-    useLedger();
+  const {
+    ready,
+    bootstrap,
+    token,
+    profile,
+    signIn,
+    signOut,
+    saveStatus,
+    saveError,
+    syncNotice,
+    dismissSyncNotice,
+    lastSavedAt,
+    saveNow,
+    offline,
+  } = useLedger();
   const [signInError, setSignInError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -273,6 +286,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </IconButton>
           )}
         </Toolbar>
+        {syncNotice ? (
+          <Alert severity="warning" sx={{ borderRadius: 0 }} onClose={dismissSyncNotice}>
+            {syncNotice}
+          </Alert>
+        ) : null}
         {saveError ? (
           <Alert severity="error" sx={{ borderRadius: 0 }}>
             {saveError}
@@ -309,7 +327,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </Container>
         <Typography variant="caption" color="text.secondary" sx={{ display: "block", px: 3, pb: 3 }}>
-          {offline ? "本機開發不會寫入 Google 雲端硬碟" : "請勿兩台裝置同時記帳，後寫會蓋前寫"}
+          {offline ? "本機開發不會寫入 Google 雲端硬碟" : "寫入前會比對雲端檔版本；較新則重新載入。請勿兩台同時記帳"}
         </Typography>
       </Box>
     </Box>

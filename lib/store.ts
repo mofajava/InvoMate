@@ -17,7 +17,15 @@ import {
   trySilentGoogleToken,
   clearAuthStorage,
 } from "./auth";
-import { loadOrCreateLedger, saveLedger, type LedgerHandle } from "./drive";
+import {
+  downloadJson,
+  getFileRevision,
+  isCloudNewer,
+  loadOrCreateLedger,
+  saveLedger,
+  withRevision,
+  type LedgerHandle,
+} from "./drive";
 import { createEmptyLedger } from "./seed";
 import { assertNonNegativeStock } from "./stock";
 import type { Ledger, SaveStatus } from "./types";
@@ -26,6 +34,7 @@ type LedgerStore = {
   ready: boolean;
   saveStatus: SaveStatus;
   saveError: string | null;
+  syncNotice: string | null;
   lastSavedAt: string | null;
   token: string | null;
   profile: GoogleProfile | null;
@@ -38,6 +47,7 @@ type LedgerStore = {
   updateLedger: (updater: (current: Ledger) => Ledger) => boolean;
   replaceLedger: (ledger: Ledger) => void;
   saveNow: () => Promise<void>;
+  dismissSyncNotice: () => void;
 };
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -83,9 +93,30 @@ async function flushSave(get: () => LedgerStore, set: (partial: Partial<LedgerSt
   }
   set({ saveStatus: "saving", saveError: null });
   try {
-    await saveLedger(token, handle, ledger);
+    const remote = await getFileRevision(token, handle.fileId);
+    if (isCloudNewer(remote, handle)) {
+      const cloudLedger = await downloadJson(token, handle.fileId);
+      const loadedRev = await getFileRevision(token, handle.fileId);
+      pending = null;
+      set({
+        ledger: cloudLedger,
+        handle: withRevision(handle, loadedRev),
+        saveStatus: "saved",
+        lastSavedAt: cloudLedger.updatedAt,
+        saveError: null,
+        syncNotice: "雲端硬碟有較新的帳本，已重新載入。剛才還沒寫上雲端的變更已取消，請再輸入一次。",
+      });
+      return;
+    }
+    const revision = await saveLedger(token, handle, ledger);
     pending = null;
-    set({ saveStatus: "saved", lastSavedAt: new Date().toISOString() });
+    set({
+      handle: revision ? withRevision(handle, revision) : handle,
+      saveStatus: "saved",
+      lastSavedAt: new Date().toISOString(),
+      saveError: null,
+      syncNotice: null,
+    });
   } catch (error) {
     set({
       saveStatus: "error",
@@ -98,6 +129,7 @@ export const useLedger = create<LedgerStore>((set, get) => ({
   ready: false,
   saveStatus: "idle",
   saveError: null,
+  syncNotice: null,
   lastSavedAt: null,
   token: null,
   profile: null,
@@ -216,6 +248,8 @@ export const useLedger = create<LedgerStore>((set, get) => ({
       ledger: createEmptyLedger(),
       saveStatus: "idle",
       lastSavedAt: null,
+      saveError: null,
+      syncNotice: null,
       offline: false,
     });
   },
@@ -248,4 +282,6 @@ export const useLedger = create<LedgerStore>((set, get) => ({
     if (saveTimer) clearTimeout(saveTimer);
     await flushSave(get, set);
   },
+
+  dismissSyncNotice: () => set({ syncNotice: null }),
 }));

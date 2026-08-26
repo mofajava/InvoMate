@@ -60,17 +60,81 @@ async function ensureFolder(token: string, name: string, parentId?: string): Pro
   return (await findFolder(token, name, parentId)) ?? createFolder(token, name, parentId);
 }
 
-async function findFile(token: string, name: string, parentId: string): Promise<string | null> {
+export type DriveRevision = {
+  modifiedTime: string;
+  version: string;
+};
+
+export type LedgerHandle = {
+  fileId: string | "local";
+  folderId: string | "local";
+  modifiedTime?: string;
+  version?: string;
+};
+
+function parseRevision(data: { modifiedTime?: string; version?: string }): DriveRevision {
+  return {
+    modifiedTime: data.modifiedTime ?? "",
+    version: data.version ?? "",
+  };
+}
+
+export function withRevision(handle: LedgerHandle, revision: DriveRevision): LedgerHandle {
+  return {
+    ...handle,
+    modifiedTime: revision.modifiedTime,
+    version: revision.version,
+  };
+}
+
+export function isCloudNewer(
+  cloud: DriveRevision,
+  known: Pick<LedgerHandle, "modifiedTime" | "version">,
+): boolean {
+  const cloudVer = Number(cloud.version);
+  const knownVer = Number(known.version);
+  if (cloud.version && known.version && Number.isFinite(cloudVer) && Number.isFinite(knownVer)) {
+    return cloudVer > knownVer;
+  }
+  const cloudTime = cloud.modifiedTime ? Date.parse(cloud.modifiedTime) : Number.NaN;
+  const knownTime = known.modifiedTime ? Date.parse(known.modifiedTime) : Number.NaN;
+  if (Number.isFinite(cloudTime) && Number.isFinite(knownTime)) {
+    return cloudTime > knownTime;
+  }
+  return false;
+}
+
+async function findFile(
+  token: string,
+  name: string,
+  parentId: string,
+): Promise<({ id: string } & Partial<DriveRevision>) | null> {
   const q = `name='${name}' and '${parentId}' in parents and trashed=false`;
   const res = await driveFetch(
     token,
-    `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name)`,
+    `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime,version)`,
   );
-  const data = (await res.json()) as { files: { id: string }[] };
-  return data.files[0]?.id ?? null;
+  const data = (await res.json()) as {
+    files: ({ id: string } & Partial<DriveRevision>)[];
+  };
+  return data.files[0] ?? null;
 }
 
-async function createJsonFile(token: string, parentId: string, content: Ledger): Promise<string> {
+export async function getFileRevision(token: string, fileId: string): Promise<DriveRevision> {
+  const res = await driveFetch(
+    token,
+    `${DRIVE}/files/${fileId}?fields=modifiedTime,version`,
+  );
+  return parseRevision((await res.json()) as { modifiedTime?: string; version?: string });
+}
+
+const FILE_FIELDS = "id,modifiedTime,version";
+
+async function createJsonFile(
+  token: string,
+  parentId: string,
+  content: Ledger,
+): Promise<{ id: string } & DriveRevision> {
   const metadata = {
     name: FILE_NAME,
     parents: [parentId],
@@ -86,35 +150,33 @@ async function createJsonFile(token: string, parentId: string, content: Ledger):
   );
   const res = await driveFetch(
     token,
-    `${UPLOAD}/files?uploadType=multipart&fields=id`,
+    `${UPLOAD}/files?uploadType=multipart&fields=${FILE_FIELDS}`,
     { method: "POST", body },
   );
-  const data = (await res.json()) as { id: string };
-  return data.id;
+  const data = (await res.json()) as { id: string; modifiedTime?: string; version?: string };
+  return { id: data.id, ...parseRevision(data) };
 }
 
-async function updateJsonFile(token: string, fileId: string, content: Ledger): Promise<void> {
-  await driveFetch(
+async function updateJsonFile(token: string, fileId: string, content: Ledger): Promise<DriveRevision> {
+  const res = await driveFetch(
     token,
-    `${UPLOAD}/files/${fileId}?uploadType=media`,
+    `${UPLOAD}/files/${fileId}?uploadType=media&fields=${FILE_FIELDS}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(content),
     },
   );
+  const data = (await res.json()) as { modifiedTime?: string; version?: string };
+  if (data.modifiedTime && data.version) return parseRevision(data);
+  return getFileRevision(token, fileId);
 }
 
-async function downloadJson(token: string, fileId: string): Promise<Ledger> {
+export async function downloadJson(token: string, fileId: string): Promise<Ledger> {
   const res = await driveFetch(token, `${DRIVE}/files/${fileId}?alt=media`);
   const data = await res.json();
   return parseLedger(data);
 }
-
-export type LedgerHandle = {
-  fileId: string | "local";
-  folderId: string | "local";
-};
 
 export async function loadOrCreateLedger(token: string | null): Promise<{
   ledger: Ledger;
@@ -134,24 +196,34 @@ export async function loadOrCreateLedger(token: string | null): Promise<{
   const existing = await findFile(token, FILE_NAME, folderId);
   if (!existing) {
     const ledger = createEmptyLedger();
-    const fileId = await createJsonFile(token, folderId, ledger);
-    return { ledger, handle: { fileId, folderId } };
+    const created = await createJsonFile(token, folderId, ledger);
+    return {
+      ledger,
+      handle: { fileId: created.id, folderId, modifiedTime: created.modifiedTime, version: created.version },
+    };
   }
-  const ledger = await downloadJson(token, existing);
-  return { ledger, handle: { fileId: existing, folderId } };
+  const revision =
+    existing.modifiedTime && existing.version
+      ? parseRevision(existing)
+      : await getFileRevision(token, existing.id);
+  const ledger = await downloadJson(token, existing.id);
+  return {
+    ledger,
+    handle: { fileId: existing.id, folderId, ...revision },
+  };
 }
 
 export async function saveLedger(
   token: string | null,
   handle: LedgerHandle,
   ledger: Ledger,
-): Promise<void> {
+): Promise<DriveRevision | null> {
   const next = { ...ledger, updatedAt: new Date().toISOString() };
   if (!token || handle.fileId === "local") {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
-    return;
+    return null;
   }
-  await updateJsonFile(token, handle.fileId, next);
+  return updateJsonFile(token, handle.fileId, next);
 }
 
 export async function uploadExportFile(
