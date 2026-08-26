@@ -45,6 +45,11 @@ export function isGoogleConfigured(): boolean {
   return googleClientId().length > 0;
 }
 
+/** `npm run dev` 略過 Google，不寫雲端。正式站與 `next start` 仍要授權。 */
+export function isOfflineDev(): boolean {
+  return process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_DEV_GOOGLE !== "1";
+}
+
 export function loadStoredToken(): string | null {
   if (typeof window === "undefined") return null;
   const token = sessionStorage.getItem(TOKEN_KEY);

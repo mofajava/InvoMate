@@ -23,6 +23,7 @@ function Body() {
   const router = useRouter();
   const { ledger } = useLedger();
   const itemName = (id: string) => ledger.items.find((i) => i.id === id)?.name ?? id;
+  const warehouseName = (id: string) => ledger.warehouses.find((i) => i.id === id)?.name ?? id;
   const rows = [...ledger.stockAdjustments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   return (
     <Stack spacing={2}>
@@ -47,6 +48,7 @@ function Body() {
               <Typography variant="body2" color="text.secondary">
                 {row.qtyInBase > 0 ? "+" : ""}
                 {formatQty(row.qtyInBase)} · {REASON[row.reason]}
+                {row.warehouseId ? ` · ${warehouseName(row.warehouseId)}` : ""}
                 {row.note ? ` · ${row.note}` : ""}
               </Typography>
             </CardContent>

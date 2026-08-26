@@ -1,17 +1,22 @@
 "use client";
 
+import AccountBalanceWalletOutlined from "@mui/icons-material/AccountBalanceWalletOutlined";
+import CategoryOutlined from "@mui/icons-material/CategoryOutlined";
 import CloudOutlined from "@mui/icons-material/CloudOutlined";
 import Inventory2Outlined from "@mui/icons-material/Inventory2Outlined";
-import Logout from "@mui/icons-material/Logout";
-import CategoryOutlined from "@mui/icons-material/CategoryOutlined";
 import LocalShippingOutlined from "@mui/icons-material/LocalShippingOutlined";
+import Logout from "@mui/icons-material/Logout";
+import MenuIcon from "@mui/icons-material/Menu";
+import OutboxOutlined from "@mui/icons-material/OutboxOutlined";
+import PeopleOutlined from "@mui/icons-material/PeopleOutlined";
+import PlaceOutlined from "@mui/icons-material/PlaceOutlined";
+import PrecisionManufacturingOutlined from "@mui/icons-material/PrecisionManufacturingOutlined";
 import StorefrontOutlined from "@mui/icons-material/StorefrontOutlined";
+import SwapHoriz from "@mui/icons-material/SwapHoriz";
 import TuneOutlined from "@mui/icons-material/TuneOutlined";
 import WarehouseOutlined from "@mui/icons-material/WarehouseOutlined";
 import Alert from "@mui/material/Alert";
 import AppBar from "@mui/material/AppBar";
-import BottomNavigation from "@mui/material/BottomNavigation";
-import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -19,27 +24,60 @@ import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import ListSubheader from "@mui/material/ListSubheader";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { isGoogleConfigured } from "@/lib/auth";
+import { isGoogleConfigured, isOfflineDev } from "@/lib/auth";
 import { useLedger } from "@/lib/store";
 
-const NAV = [
-  { href: "/inbounds/", label: "進貨", icon: <LocalShippingOutlined /> },
-  { href: "/stock/", label: "庫存", icon: <WarehouseOutlined /> },
-  { href: "/adjustments/", label: "調整", icon: <TuneOutlined /> },
-  { href: "/suppliers/", label: "供應商", icon: <StorefrontOutlined /> },
-  { href: "/items/", label: "品項", icon: <CategoryOutlined /> },
+const DRAWER_WIDTH = 280;
+
+type NavItem = { href: string; label: string; icon: React.ReactNode };
+
+const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+  {
+    title: "帳務",
+    items: [
+      { href: "/inbounds/", label: "進貨", icon: <LocalShippingOutlined /> },
+      { href: "/outbounds/", label: "出貨", icon: <OutboxOutlined /> },
+      { href: "/receivables/", label: "應收", icon: <AccountBalanceWalletOutlined /> },
+    ],
+  },
+  {
+    title: "庫存作業",
+    items: [
+      { href: "/stock/", label: "庫存", icon: <WarehouseOutlined /> },
+      { href: "/work-orders/", label: "加工", icon: <PrecisionManufacturingOutlined /> },
+      { href: "/adjustments/", label: "調整", icon: <TuneOutlined /> },
+      { href: "/transfers/", label: "調撥", icon: <SwapHoriz /> },
+    ],
+  },
+  {
+    title: "主檔",
+    items: [
+      { href: "/suppliers/", label: "供應商", icon: <StorefrontOutlined /> },
+      { href: "/customers/", label: "客戶", icon: <PeopleOutlined /> },
+      { href: "/items/", label: "品項", icon: <CategoryOutlined /> },
+      { href: "/warehouses/", label: "倉點", icon: <PlaceOutlined /> },
+    ],
+  },
 ];
 
-function saveLabel(status: string, lastSavedAt: string | null) {
+const ALL_NAV = NAV_GROUPS.flatMap((group) => group.items);
+
+function saveLabel(status: string, lastSavedAt: string | null, offline: boolean) {
+  if (offline) return "本機（不同步）";
   if (status === "loading") return "載入中";
   if (status === "saving") return "儲存中";
   if (status === "error") return "儲存失敗";
@@ -51,21 +89,30 @@ function saveLabel(status: string, lastSavedAt: string | null) {
   return "";
 }
 
-function activeHref(pathname: string) {
-  return NAV.find((item) => pathname.startsWith(item.href.replace(/\/$/, "")))?.href ?? NAV[0].href;
+function isActive(pathname: string, href: string) {
+  const base = href.replace(/\/$/, "");
+  return pathname === href || pathname === base || pathname.startsWith(`${base}/`);
+}
+
+function currentLabel(pathname: string) {
+  return ALL_NAV.find((item) => isActive(pathname, item.href))?.label ?? "InvoMate";
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { ready, bootstrap, token, profile, signIn, signOut, saveStatus, saveError, lastSavedAt, saveNow } =
+  const { ready, bootstrap, token, profile, signIn, signOut, saveStatus, saveError, lastSavedAt, saveNow, offline } =
     useLedger();
   const [signInError, setSignInError] = useState("");
-  const current = activeHref(pathname);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    if (!ready) void bootstrap();
-  }, [ready, bootstrap]);
+    if (!ready || (isOfflineDev() && !offline)) void bootstrap();
+  }, [ready, bootstrap, offline]);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   if (!ready) {
     return (
@@ -76,7 +123,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!token) {
+  if (!token && !offline) {
     const configured = isGoogleConfigured();
     return (
       <Box sx={{ minHeight: "100dvh", bgcolor: "background.default", display: "flex", alignItems: "center" }}>
@@ -141,66 +188,130 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return (
-    <Box sx={{ minHeight: "100dvh", bgcolor: "background.default", pb: { xs: 10, md: 0 } }}>
-      <AppBar position="sticky">
-        <Toolbar sx={{ gap: 1 }}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            InvoMate
+  function go(href: string) {
+    router.push(href);
+    setDrawerOpen(false);
+  }
+
+  const drawer = (
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Toolbar sx={{ gap: 1.5 }}>
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            borderRadius: 1.5,
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <Inventory2Outlined fontSize="small" />
+        </Box>
+        <Box>
+          <Typography sx={{ fontWeight: 500 }}>InvoMate</Typography>
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {offline ? "本機開發 · 不同步雲端" : profile?.email}
           </Typography>
-          <Chip size="small" label={saveLabel(saveStatus, lastSavedAt)} variant="outlined" />
-          {saveStatus === "error" ? (
+        </Box>
+      </Toolbar>
+      <Divider />
+      <Box sx={{ overflow: "auto", flex: 1 }}>
+        {NAV_GROUPS.map((group, index) => (
+          <List
+            key={group.title}
+            subheader={
+              <ListSubheader component="div" sx={{ bgcolor: "transparent", lineHeight: "36px" }}>
+                {group.title}
+              </ListSubheader>
+            }
+          >
+            {group.items.map((item) => (
+              <ListItemButton
+                key={item.href}
+                selected={isActive(pathname, item.href)}
+                onClick={() => go(item.href)}
+                sx={{ mx: 1, borderRadius: 2, minHeight: 48 }}
+              >
+                <ListItemIcon sx={{ minWidth: 40, color: "inherit" }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            ))}
+            {index < NAV_GROUPS.length - 1 ? <Divider sx={{ my: 1 }} /> : null}
+          </List>
+        ))}
+      </Box>
+    </Box>
+  );
+
+  return (
+    <Box sx={{ minHeight: "100dvh", bgcolor: "background.default", display: "flex" }}>
+      <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
+        <Toolbar sx={{ gap: 1 }}>
+          <IconButton
+            color="inherit"
+            edge="start"
+            aria-label="開啟功能選單"
+            onClick={() => setDrawerOpen(true)}
+            sx={{ display: { md: "none" } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h6" sx={{ flexGrow: 1 }} noWrap>
+            {currentLabel(pathname)}
+          </Typography>
+          <Chip size="small" label={saveLabel(saveStatus, lastSavedAt, offline)} variant="outlined" />
+          {saveStatus === "error" && !offline ? (
             <Button color="error" onClick={() => void saveNow()}>
               重試
             </Button>
           ) : null}
-          <IconButton aria-label="登出" onClick={signOut}>
-            <Logout />
-          </IconButton>
+          {offline ? null : (
+            <IconButton aria-label="登出" onClick={signOut}>
+              <Logout />
+            </IconButton>
+          )}
         </Toolbar>
-        <Box sx={{ px: 2, pb: 1, display: { xs: "none", md: "block" } }}>
-          <Typography variant="caption" color="text.secondary">
-            {profile?.email} · 請勿兩台裝置同時記帳，後寫會蓋前寫
-          </Typography>
-        </Box>
         {saveError ? (
           <Alert severity="error" sx={{ borderRadius: 0 }}>
             {saveError}
           </Alert>
         ) : null}
-        <Tabs
-          value={current}
-          onChange={(_, href: string) => router.push(href)}
-          variant="scrollable"
-          sx={{ display: { xs: "none", md: "flex" }, px: 1 }}
-        >
-          {NAV.map((item) => (
-            <Tab key={item.href} value={item.href} label={item.label} icon={item.icon} iconPosition="start" />
-          ))}
-        </Tabs>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        {children}
-      </Container>
-      <BottomNavigation
-        showLabels
-        value={current}
-        onChange={(_, href: string) => router.push(href)}
-        sx={{
-          display: { md: "none" },
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 20,
-          borderTop: 1,
-          borderColor: "divider",
-        }}
-      >
-        {NAV.map((item) => (
-          <BottomNavigationAction key={item.href} value={item.href} label={item.label} icon={item.icon} />
-        ))}
-      </BottomNavigation>
+      <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
+        <Drawer
+          variant="temporary"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: "block", md: "none" },
+            "& .MuiDrawer-paper": { width: DRAWER_WIDTH, boxSizing: "border-box" },
+          }}
+        >
+          {drawer}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          open
+          sx={{
+            display: { xs: "none", md: "block" },
+            "& .MuiDrawer-paper": { width: DRAWER_WIDTH, boxSizing: "border-box" },
+          }}
+        >
+          {drawer}
+        </Drawer>
+      </Box>
+      <Box component="main" sx={{ flexGrow: 1, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` } }}>
+        <Toolbar />
+        <Container maxWidth="lg" sx={{ py: 3 }}>
+          {children}
+        </Container>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", px: 3, pb: 3 }}>
+          {offline ? "本機開發不會寫入 Google 雲端硬碟" : "請勿兩台裝置同時記帳，後寫會蓋前寫"}
+        </Typography>
+      </Box>
     </Box>
   );
 }

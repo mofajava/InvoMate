@@ -98,6 +98,7 @@ describe("stock", () => {
       date: "2025-12-01",
       itemId: SEED_IDS.items.yam,
       grade: "",
+      warehouseId: "",
       qtyInBase: -3,
       reason: "consume",
       note: "",

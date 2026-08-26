@@ -12,15 +12,17 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import AppShell from "@/components/AppShell";
+import { itemHasHistory, itemHistoryCounts, KIND_LABEL } from "@/lib/master";
 import { newId } from "@/lib/seed";
 import { useLedger } from "@/lib/store";
-import type { BaseUnit } from "@/lib/types";
+import type { BaseUnit, ItemKind } from "@/lib/types";
 import { conversionSummary } from "@/lib/units";
 
 function Body() {
   const { ledger, updateLedger } = useLedger();
   const [name, setName] = useState("");
   const [baseUnit, setBaseUnit] = useState<BaseUnit>("jin");
+  const [kind, setKind] = useState<ItemKind>("raw");
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -41,7 +43,7 @@ function Body() {
     const timestamp = new Date().toISOString();
     updateLedger((current) => ({
       ...current,
-      items: [...current.items, { id: newId(), name: trimmed, baseUnit, archived: 0, createdAt: timestamp, updatedAt: timestamp }],
+      items: [...current.items, { id: newId(), name: trimmed, baseUnit, kind, archived: 0, createdAt: timestamp, updatedAt: timestamp }],
     }));
     setName("");
     setError("");
@@ -84,10 +86,11 @@ function Body() {
   }
 
   function remove(id: string) {
-    const inboundUsed = ledger.inboundRecords.filter((row) => row.itemId === id).length;
-    const adjUsed = ledger.stockAdjustments.filter((row) => row.itemId === id).length;
-    if (inboundUsed + adjUsed > 0) {
-      setError(`已有 ${inboundUsed} 筆進貨、${adjUsed} 筆庫存調整使用此品項，無法刪除。可改為停用。`);
+    if (itemHasHistory(ledger, id)) {
+      const counts = itemHistoryCounts(ledger, id);
+      setError(
+        `已有進貨 ${counts.inbound}、調整 ${counts.adjustments}、加工 ${counts.workOrders}、調撥 ${counts.transfers}、出貨 ${counts.outbounds} 筆使用此品項，無法刪除。可改為停用。`,
+      );
       return;
     }
     if (!confirm("確定刪除這個品項？")) return;
@@ -145,6 +148,10 @@ function Body() {
       <Typography variant="h5">品項</Typography>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <TextField label="新品項，例如山藥成品" value={name} onChange={(e) => setName(e.target.value)} />
+        <TextField select label="種類" value={kind} onChange={(e) => setKind(e.target.value as ItemKind)} sx={{ minWidth: 120 }}>
+          <MenuItem value="raw">原料</MenuItem>
+          <MenuItem value="finished">成品</MenuItem>
+        </TextField>
         <TextField select label="基準單位" value={baseUnit} onChange={(e) => setBaseUnit(e.target.value as BaseUnit)} sx={{ minWidth: 120 }}>
           <MenuItem value="jin">斤</MenuItem>
           <MenuItem value="bag">包</MenuItem>
@@ -188,8 +195,9 @@ function Body() {
             ) : (
               <>
                 <CardContent>
-                  <Stack direction="row" sx={{ alignItems: "center", gap: 1 }}>
+                  <Stack direction="row" sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                     <Typography sx={{ fontWeight: 500 }}>{item.name}</Typography>
+                    <Chip size="small" label={KIND_LABEL[item.kind]} color={item.kind === "finished" ? "primary" : "default"} />
                     {item.archived ? <Chip size="small" label="已停用" /> : null}
                   </Stack>
                   <Typography variant="body2" color="text.secondary">{conversionSummary(item, ledger.unitConversions)}</Typography>

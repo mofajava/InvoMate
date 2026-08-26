@@ -1,4 +1,4 @@
-import type { Item, Ledger, Supplier, UnitConversion } from "./types";
+import type { Item, Ledger, Supplier, UnitConversion, Warehouse } from "./types";
 
 const now = () => new Date().toISOString();
 
@@ -21,11 +21,39 @@ export const SEED_IDS = {
     sugar: "item-sugar",
     flour: "item-sanhua-flour",
     starch: "item-sweet-potato-starch",
+    yamFinished: "item-yam-finished",
+  },
+  warehouses: {
+    yongjing: "wh-yongjing",
+    tianwei: "wh-tianwei",
   },
   conversion: {
     yamBox: "conv-yam-box",
   },
 } as const;
+
+function named(id: string, name: string, timestamp: string) {
+  return { id, name, archived: 0 as const, createdAt: timestamp, updatedAt: timestamp };
+}
+
+export function seedWarehouses(timestamp: string): Warehouse[] {
+  return [
+    named(SEED_IDS.warehouses.yongjing, "永靖", timestamp),
+    named(SEED_IDS.warehouses.tianwei, "田尾", timestamp),
+  ];
+}
+
+export function seedFinishedYam(timestamp: string): Item {
+  return {
+    id: SEED_IDS.items.yamFinished,
+    name: "山藥成品",
+    baseUnit: "jin",
+    kind: "finished",
+    archived: 0,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
 
 export function createEmptyLedger(): Ledger {
   const timestamp = now();
@@ -37,19 +65,14 @@ export function createEmptyLedger(): Ledger {
     ["西螺", SEED_IDS.suppliers.xiluo],
     ["未指定", SEED_IDS.suppliers.unspecified],
     ["益", SEED_IDS.suppliers.yi],
-  ].map(([name, sid]) => ({
-    id: sid,
-    name,
-    archived: 0,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  }));
+  ].map(([name, sid]) => named(sid, name, timestamp));
 
   const items: Item[] = [
-    { id: SEED_IDS.items.yam, name: "紫山藥", baseUnit: "jin" as const },
-    { id: SEED_IDS.items.sugar, name: "糖", baseUnit: "bag" as const },
-    { id: SEED_IDS.items.flour, name: "三花麵粉", baseUnit: "bag" as const },
-    { id: SEED_IDS.items.starch, name: "地瓜粉", baseUnit: "bag" as const },
+    { id: SEED_IDS.items.yam, name: "紫山藥", baseUnit: "jin" as const, kind: "raw" as const },
+    { id: SEED_IDS.items.sugar, name: "糖", baseUnit: "bag" as const, kind: "raw" as const },
+    { id: SEED_IDS.items.flour, name: "三花麵粉", baseUnit: "bag" as const, kind: "raw" as const },
+    { id: SEED_IDS.items.starch, name: "地瓜粉", baseUnit: "bag" as const, kind: "raw" as const },
+    seedFinishedYam(timestamp),
   ].map((item) => ({
     ...item,
     archived: 0 as const,
@@ -69,13 +92,18 @@ export function createEmptyLedger(): Ledger {
   ];
 
   return {
-    version: 1,
+    version: 2,
     updatedAt: timestamp,
     suppliers,
     items,
     unitConversions,
     inboundRecords: [],
     stockAdjustments: [],
+    warehouses: seedWarehouses(timestamp),
+    customers: [],
+    workOrders: [],
+    transfers: [],
+    outboundRecords: [],
   };
 }
 

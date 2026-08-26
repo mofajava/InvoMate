@@ -41,7 +41,9 @@ export default function InboundForm({ editId }: Props) {
   const item = ledger.items.find((row) => row.id === itemId);
   const units = item ? allowedUnits(item, ledger.unitConversions) : [];
   const activeSuppliers = ledger.suppliers.filter((s) => !s.archived || s.id === supplierId);
-  const activeItems = ledger.items.filter((s) => !s.archived || s.id === itemId);
+  const activeItems = ledger.items.filter(
+    (s) => s.kind === "raw" && (!s.archived || s.id === itemId),
+  );
   const qtyNum = Number(qty);
   const priceNum = Number(unitPrice);
   const formula = Number.isFinite(qtyNum) && Number.isFinite(priceNum) ? computedAmount(qtyNum, priceNum) : 0;
@@ -139,12 +141,16 @@ export default function InboundForm({ editId }: Props) {
         record.createdAt = existing.createdAt;
         record.updatedAt = new Date().toISOString();
       }
-      updateLedger((current) => ({
+      const ok = updateLedger((current) => ({
         ...current,
         inboundRecords: existing
           ? current.inboundRecords.map((row) => (row.id === existing.id ? record : row))
           : [...current.inboundRecords, record],
       }));
+      if (!ok) {
+        setError(useLedger.getState().saveError ?? "庫存不足，無法儲存");
+        return;
+      }
       router.push("/inbounds/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "儲存失敗");

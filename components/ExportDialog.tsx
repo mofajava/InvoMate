@@ -20,7 +20,8 @@ import type { InboundQuery } from "@/lib/types";
 type Props = { query: InboundQuery };
 
 export default function ExportDialog({ query }: Props) {
-  const { ledger, token, handle } = useLedger();
+  const { ledger, token, handle, offline } = useLedger();
+  const canDrive = Boolean(!offline && token && handle && handle.folderId !== "local");
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<"xlsx" | "pdf">("xlsx");
   const [scope, setScope] = useState<"filter" | "all">("filter");
@@ -40,7 +41,7 @@ export default function ExportDialog({ query }: Props) {
           ? buildWorkbook(ledger, query, useFilter).blob
           : await buildPdfBlob(ledger, query, useFilter);
       if (toDevice) downloadBlob(blob, filename);
-      if (toDrive && token && handle && handle.folderId !== "local") {
+      if (canDrive && toDrive && token && handle) {
         const mime =
           format === "xlsx"
             ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -52,10 +53,8 @@ export default function ExportDialog({ query }: Props) {
         } else {
           setMessage("已上傳");
         }
-      } else if (toDrive && (!token || handle?.folderId === "local")) {
-        setMessage("無法上傳雲端硬碟，已改為僅下載");
       } else {
-        setMessage("已完成");
+        setMessage(toDevice ? "已下載" : "已完成");
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "匯出失敗");
@@ -81,10 +80,12 @@ export default function ExportDialog({ query }: Props) {
               <MenuItem value="filter">目前篩選</MenuItem>
               <MenuItem value="all">全部進貨</MenuItem>
             </TextField>
-            <FormControlLabel
-              control={<Checkbox checked={toDrive} onChange={(e) => setToDrive(e.target.checked)} />}
-              label="存到 Google 雲端硬碟"
-            />
+            {canDrive ? (
+              <FormControlLabel
+                control={<Checkbox checked={toDrive} onChange={(e) => setToDrive(e.target.checked)} />}
+                label="存到 Google 雲端硬碟"
+              />
+            ) : null}
             <FormControlLabel
               control={<Checkbox checked={toDevice} onChange={(e) => setToDevice(e.target.checked)} />}
               label="下載到此裝置"

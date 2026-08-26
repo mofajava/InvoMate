@@ -8,12 +8,19 @@
 
 ```bash
 npm install
-cp .env.example .env.local
-# 填入 NEXT_PUBLIC_GOOGLE_CLIENT_ID 後，打開網頁會先進入授權畫面
 npm run dev
 ```
 
-開 http://localhost:3000 會先請你用 Google 授權雲端硬碟（瀏覽器規定要點一次按鈕，授權視窗不能自動跳出）。尚未設定用戶端 ID 時，畫面會說明設定步驟。
+`npm run dev` **不必 Google 登入**，會直接進 App，帳本只留在這個瀏覽器（`localStorage`），**不會寫入雲端硬碟**。頂欄會顯示「本機（不同步）」。
+
+若要在本機測 Google／Drive 同步，在 `.env.local` 加上：
+
+```
+NEXT_PUBLIC_DEV_GOOGLE=1
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
+```
+
+然後重開 dev server，就會回到授權畫面。
 
 ```bash
 npm test
