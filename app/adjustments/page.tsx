@@ -11,6 +11,7 @@ import AppShell from "@/components/AppShell";
 import { formatRoc } from "@/lib/calendar";
 import { formatQty } from "@/lib/money";
 import { useLedger } from "@/lib/store";
+import { UNIT_LABEL } from "@/lib/units";
 
 const REASON: Record<string, string> = {
   stocktake: "盤點",
@@ -47,7 +48,7 @@ function Body() {
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {row.qtyInBase > 0 ? "+" : ""}
-                {formatQty(row.qtyInBase)} · {REASON[row.reason]}
+                {formatQty(row.qtyInBase)} {UNIT_LABEL[ledger.items.find((i) => i.id === row.itemId)?.baseUnit ?? "jin"]} · {REASON[row.reason]}
                 {row.warehouseId ? ` · ${warehouseName(row.warehouseId)}` : ""}
                 {row.note ? ` · ${row.note}` : ""}
               </Typography>

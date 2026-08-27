@@ -16,7 +16,7 @@ import { itemHasHistory, itemHistoryCounts, KIND_LABEL } from "@/lib/master";
 import { newId } from "@/lib/seed";
 import { useLedger } from "@/lib/store";
 import type { BaseUnit, ItemKind } from "@/lib/types";
-import { conversionSummary } from "@/lib/units";
+import { conversionSummary, FINISHED_UNIT, UNIT_LABEL } from "@/lib/units";
 
 function Body() {
   const { ledger, updateLedger } = useLedger();
@@ -43,7 +43,15 @@ function Body() {
     const timestamp = new Date().toISOString();
     updateLedger((current) => ({
       ...current,
-      items: [...current.items, { id: newId(), name: trimmed, baseUnit, kind, archived: 0, createdAt: timestamp, updatedAt: timestamp }],
+      items: [...current.items, {
+        id: newId(),
+        name: trimmed,
+        baseUnit: kind === "finished" ? FINISHED_UNIT : baseUnit,
+        kind,
+        archived: 0,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }],
     }));
     setName("");
     setError("");
@@ -148,14 +156,28 @@ function Body() {
       <Typography variant="h5">品項</Typography>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <TextField label="新品項，例如山藥成品" value={name} onChange={(e) => setName(e.target.value)} />
-        <TextField select label="種類" value={kind} onChange={(e) => setKind(e.target.value as ItemKind)} sx={{ minWidth: 120 }}>
+        <TextField
+          select
+          label="種類"
+          value={kind}
+          onChange={(e) => {
+            const next = e.target.value as ItemKind;
+            setKind(next);
+            setBaseUnit(next === "finished" ? FINISHED_UNIT : "jin");
+          }}
+          sx={{ minWidth: 120 }}
+        >
           <MenuItem value="raw">原料</MenuItem>
           <MenuItem value="finished">成品</MenuItem>
         </TextField>
-        <TextField select label="基準單位" value={baseUnit} onChange={(e) => setBaseUnit(e.target.value as BaseUnit)} sx={{ minWidth: 120 }}>
-          <MenuItem value="jin">斤</MenuItem>
-          <MenuItem value="bag">包</MenuItem>
-        </TextField>
+        {kind === "finished" ? (
+          <TextField label="基準單位" value={UNIT_LABEL[FINISHED_UNIT]} disabled sx={{ minWidth: 120 }} />
+        ) : (
+          <TextField select label="基準單位" value={baseUnit} onChange={(e) => setBaseUnit(e.target.value as BaseUnit)} sx={{ minWidth: 120 }}>
+            <MenuItem value="jin">斤</MenuItem>
+            <MenuItem value="bag">包</MenuItem>
+          </TextField>
+        )}
         <Button variant="contained" onClick={add} sx={{ whiteSpace: "nowrap" }}>新增</Button>
       </Stack>
       {error ? <Alert severity="error">{error}</Alert> : null}
@@ -183,9 +205,9 @@ function Body() {
             ) : convertingId === item.id ? (
               <CardContent>
                 <Stack spacing={1.5}>
-                  <Typography sx={{ fontWeight: 500 }}>{item.name}　箱 → {item.baseUnit === "jin" ? "斤" : "包"}</Typography>
+                  <Typography sx={{ fontWeight: 500 }}>{item.name}　箱 → {UNIT_LABEL[item.baseUnit]}</Typography>
                   <TextField label="幾箱" inputMode="numeric" value={fromQty} onChange={(e) => setFromQty(e.target.value)} />
-                  <TextField label={`等於多少${item.baseUnit === "jin" ? "斤" : "包"}`} inputMode="numeric" value={toQty} onChange={(e) => setToQty(e.target.value)} />
+                  <TextField label={`等於多少${UNIT_LABEL[item.baseUnit]}`} inputMode="numeric" value={toQty} onChange={(e) => setToQty(e.target.value)} />
                   <Stack direction="row" spacing={1}>
                     <Button fullWidth variant="outlined" onClick={() => setConvertingId(null)}>取消</Button>
                     <Button fullWidth variant="contained" onClick={saveConversion}>儲存</Button>
@@ -198,6 +220,7 @@ function Body() {
                   <Stack direction="row" sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                     <Typography sx={{ fontWeight: 500 }}>{item.name}</Typography>
                     <Chip size="small" label={KIND_LABEL[item.kind]} color={item.kind === "finished" ? "primary" : "default"} />
+                    <Chip size="small" variant="outlined" label={UNIT_LABEL[item.baseUnit]} />
                     {item.archived ? <Chip size="small" label="已停用" /> : null}
                   </Stack>
                   <Typography variant="body2" color="text.secondary">{conversionSummary(item, ledger.unitConversions)}</Typography>

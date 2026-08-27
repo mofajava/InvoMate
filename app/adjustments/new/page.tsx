@@ -14,6 +14,7 @@ import { isValidIsoDate, todayIso } from "@/lib/calendar";
 import { newId } from "@/lib/seed";
 import { useLedger } from "@/lib/store";
 import type { AdjustmentReason } from "@/lib/types";
+import { UNIT_LABEL } from "@/lib/units";
 
 function Form() {
   const router = useRouter();
@@ -112,7 +113,12 @@ function Form() {
         <MenuItem value="">未分級</MenuItem>
         <MenuItem value="醜">醜</MenuItem>
       </TextField>
-      <TextField label="增減量（基準單位：斤或包）" inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} />
+      <TextField
+        label={`增減量（${selected ? UNIT_LABEL[selected.baseUnit] : "基準單位"}）`}
+        inputMode="decimal"
+        value={qty}
+        onChange={(e) => setQty(e.target.value)}
+      />
       <TextField select label="原因" value={reason} onChange={(e) => setReason(e.target.value as AdjustmentReason)}>
         <MenuItem value="stocktake">盤點</MenuItem>
         <MenuItem value="consume">耗用</MenuItem>

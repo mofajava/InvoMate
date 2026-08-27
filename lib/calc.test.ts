@@ -49,6 +49,12 @@ describe("units", () => {
   it("keeps jin as-is", () => {
     expect(qtyInBase(1308, "jin", yam(), conversions())).toBe(1308);
   });
+
+  it("keeps finished barrels as-is", () => {
+    const finished = createEmptyLedger().items.find((i) => i.id === SEED_IDS.items.yamFinished)!;
+    expect(finished.baseUnit).toBe("barrel");
+    expect(qtyInBase(3, "barrel", finished, [])).toBe(3);
+  });
 });
 
 function inbound(partial: Partial<InboundRecord> & Pick<InboundRecord, "id" | "amount" | "qtyInBase" | "supplierId">): InboundRecord {

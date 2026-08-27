@@ -6,7 +6,8 @@ import { parseLedger } from "./schema";
 import { createEmptyLedger, SEED_IDS } from "./seed";
 import { assertNonNegativeStock, finishedBalances, rawBalances, stockBalances } from "./stock";
 import { buildTransfer } from "./transfer";
-import type { Ledger, WorkOrder } from "./types";
+import type { Ledger, WorkOrder, WorkOrderOutput } from "./types";
+import { buildWorkOrder } from "./work-order";
 
 describe("migrate v1 to v2", () => {
   it("keeps inbound raw stock and seeds 永靖／田尾／山藥成品", () => {
@@ -46,20 +47,84 @@ describe("migrate v1 to v2", () => {
     expect(migrated.version).toBe(2);
     expect(migrated.warehouses.map((w) => w.name)).toEqual(expect.arrayContaining(["永靖", "田尾"]));
     expect(migrated.warehouses).toHaveLength(2);
-    expect(migrated.items.some((i) => i.name === "山藥成品" && i.kind === "finished")).toBe(true);
+    expect(migrated.items.some((i) => i.name === "山藥成品" && i.kind === "finished" && i.baseUnit === "barrel")).toBe(true);
     expect(rawBalances(migrated).find((r) => r.itemId === SEED_IDS.items.yam)?.balance).toBe(10);
     const parsed = parseLedger(v1);
     expect(stockBalances(parsed.items, parsed.inboundRecords, parsed.stockAdjustments).find((r) => r.itemId === SEED_IDS.items.yam)?.balance).toBe(10);
   });
+
+  it("rewrites existing finished jin records to barrels", () => {
+    const base = createEmptyLedger();
+    const migrated = migrateToV2({
+      ...base,
+      items: base.items.map((item) =>
+        item.kind === "finished" ? { ...item, baseUnit: "jin" as const } : item,
+      ),
+      workOrders: [
+        {
+          id: "wo1",
+          date: "2026-08-01",
+          outputItemId: SEED_IDS.items.yamFinished,
+          outputGrade: "",
+          outputQty: 3,
+          outputUnit: "jin",
+          outputQtyInBase: 3,
+          warehouseId: SEED_IDS.warehouses.yongjing,
+          consumes: [],
+          note: "",
+          createdAt: base.updatedAt,
+          updatedAt: base.updatedAt,
+        },
+      ],
+      outboundRecords: [
+        {
+          id: "out1",
+          date: "2026-08-02",
+          customerId: "c",
+          itemId: SEED_IDS.items.yamFinished,
+          grade: "",
+          warehouseId: SEED_IDS.warehouses.yongjing,
+          qty: 1,
+          unit: "jin",
+          qtyInBase: 1,
+          unitPrice: 100,
+          computedAmount: 100,
+          amount: 100,
+          amountOverridden: 0,
+          arStatus: "unpaid",
+          note: "",
+          createdAt: base.updatedAt,
+          updatedAt: base.updatedAt,
+        },
+      ],
+    });
+    expect(migrated.items.find((i) => i.id === SEED_IDS.items.yamFinished)?.baseUnit).toBe("barrel");
+    expect(migrated.workOrders[0]?.outputUnit).toBe("barrel");
+    expect(migrated.workOrders[0]?.outputs).toEqual([
+      {
+        id: "wo1-out",
+        warehouseId: SEED_IDS.warehouses.yongjing,
+        qty: 3,
+        qtyInBase: 3,
+      },
+    ]);
+    expect(migrated.outboundRecords[0]?.unit).toBe("barrel");
+  });
 });
 
-function wo(partial: Partial<WorkOrder> & Pick<WorkOrder, "id" | "outputQtyInBase" | "warehouseId" | "consumes">): WorkOrder {
+function out(warehouseId: string, qty: number, id = "out"): WorkOrderOutput {
+  return { id, warehouseId, qty, qtyInBase: qty };
+}
+
+function wo(partial: Partial<WorkOrder> & Pick<WorkOrder, "id" | "outputs" | "consumes">): WorkOrder {
+  const outputQtyInBase = partial.outputs.reduce((sum, line) => sum + line.qtyInBase, 0);
   return {
     date: "2025-09-02",
     outputItemId: SEED_IDS.items.yamFinished,
     outputGrade: "",
-    outputQty: partial.outputQtyInBase,
-    outputUnit: "jin",
+    outputQty: outputQtyInBase,
+    outputQtyInBase,
+    outputUnit: "barrel",
     note: "",
     createdAt: "",
     updatedAt: "",
@@ -97,8 +162,7 @@ describe("phase 2 stock", () => {
       workOrders: [
         wo({
           id: "wo-over",
-          outputQtyInBase: 8,
-          warehouseId: SEED_IDS.warehouses.yongjing,
+          outputs: [out(SEED_IDS.warehouses.yongjing, 8)],
           consumes: [{ id: "c1", itemId: SEED_IDS.items.yam, grade: "", qty: 11, unit: "jin", qtyInBase: 11 }],
         }),
       ],
@@ -109,8 +173,7 @@ describe("phase 2 stock", () => {
       workOrders: [
         wo({
           id: "wo-ok",
-          outputQtyInBase: 8,
-          warehouseId: SEED_IDS.warehouses.yongjing,
+          outputs: [out(SEED_IDS.warehouses.yongjing, 8)],
           consumes: [{ id: "c1", itemId: SEED_IDS.items.yam, grade: "", qty: 10, unit: "jin", qtyInBase: 10 }],
         }),
       ],
@@ -127,8 +190,7 @@ describe("phase 2 stock", () => {
       workOrders: [
         wo({
           id: "wo",
-          outputQtyInBase: 8,
-          warehouseId: SEED_IDS.warehouses.yongjing,
+          outputs: [out(SEED_IDS.warehouses.yongjing, 8)],
           consumes: [],
         }),
       ],
@@ -141,7 +203,7 @@ describe("phase 2 stock", () => {
           fromWarehouseId: SEED_IDS.warehouses.yongjing,
           toWarehouseId: SEED_IDS.warehouses.tianwei,
           qty: 8,
-          unit: "jin",
+          unit: "barrel",
           qtyInBase: 8,
           note: "",
           createdAt: "",
@@ -164,7 +226,7 @@ describe("phase 2 stock", () => {
           grade: "",
           warehouseId: SEED_IDS.warehouses.yongjing,
           qty: 1,
-          unit: "jin",
+          unit: "barrel",
           qtyInBase: 1,
           unitPrice: 80,
           computedAmount: 80,
@@ -178,6 +240,26 @@ describe("phase 2 stock", () => {
       ],
     };
     expect(() => assertNonNegativeStock(overShip)).toThrow(/成品庫存不足/);
+  });
+
+  it("splits one work order into multiple warehouses", () => {
+    const ledger: Ledger = {
+      ...createEmptyLedger(),
+      workOrders: [
+        wo({
+          id: "wo-split",
+          outputs: [
+            out(SEED_IDS.warehouses.yongjing, 5, "a"),
+            out(SEED_IDS.warehouses.tianwei, 3, "b"),
+          ],
+          consumes: [],
+        }),
+      ],
+    };
+    expect(() => assertNonNegativeStock(ledger)).not.toThrow();
+    expect(finishedBalances(ledger).find((r) => r.warehouseId === SEED_IDS.warehouses.yongjing)?.balance).toBe(5);
+    expect(finishedBalances(ledger).find((r) => r.warehouseId === SEED_IDS.warehouses.tianwei)?.balance).toBe(3);
+    expect(ledger.workOrders[0]?.outputQtyInBase).toBe(8);
   });
 });
 
@@ -232,5 +314,24 @@ describe("phase 2 builders", () => {
         ledger,
       }),
     ).toThrow(/來源倉與目的倉不可相同/);
+  });
+
+  it("rejects duplicate warehouse on one work order", () => {
+    const ledger = createEmptyLedger();
+    expect(() =>
+      buildWorkOrder({
+        id: "x",
+        date: "2025-09-01",
+        outputItemId: SEED_IDS.items.yamFinished,
+        outputGrade: "",
+        outputs: [
+          { id: "a", warehouseId: SEED_IDS.warehouses.yongjing, qty: 1 },
+          { id: "b", warehouseId: SEED_IDS.warehouses.yongjing, qty: 2 },
+        ],
+        consumes: [{ id: "c1", itemId: SEED_IDS.items.yam, grade: "", qty: 1, unit: "jin" }],
+        note: "",
+        ledger,
+      }),
+    ).toThrow(/同一倉請合併成一列/);
   });
 });

@@ -88,7 +88,9 @@ export function finishedBalances(ledger: Ledger): FinishedStockRow[] {
     map.set(key, (map.get(key) ?? 0) + qty);
   };
   for (const order of ledger.workOrders) {
-    bump(order.outputItemId, order.outputGrade, order.warehouseId, order.outputQtyInBase);
+    for (const line of order.outputs) {
+      bump(order.outputItemId, order.outputGrade, line.warehouseId, line.qtyInBase);
+    }
   }
   for (const row of ledger.transfers) {
     bump(row.itemId, row.grade, row.toWarehouseId, row.qtyInBase);

@@ -47,7 +47,7 @@ export function seedFinishedYam(timestamp: string): Item {
   return {
     id: SEED_IDS.items.yamFinished,
     name: "山藥成品",
-    baseUnit: "jin",
+    baseUnit: "barrel",
     kind: "finished",
     archived: 0,
     createdAt: timestamp,

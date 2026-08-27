@@ -22,8 +22,8 @@ import { buildOutbound, lastOutboundPrice } from "@/lib/outbound";
 import { newId } from "@/lib/seed";
 import { finishedBalances } from "@/lib/stock";
 import { useLedger } from "@/lib/store";
-import type { ArStatus, Ledger, UnitCode } from "@/lib/types";
-import { allowedUnits, UNIT_LABEL } from "@/lib/units";
+import type { ArStatus, Ledger } from "@/lib/types";
+import { FINISHED_UNIT, UNIT_LABEL } from "@/lib/units";
 
 type Props = { editId?: string };
 
@@ -44,9 +44,6 @@ export default function OutboundForm({ editId }: Props) {
   const [grade, setGrade] = useState(existing?.grade || "");
   const [warehouseId, setWarehouseId] = useState(existing?.warehouseId ?? "");
   const [qty, setQty] = useState(existing ? String(existing.qty) : "");
-  const [unit, setUnit] = useState<UnitCode>(
-    existing?.unit ?? ledger.items.find((row) => row.id === initialFinishedId)?.baseUnit ?? "jin",
-  );
   const [unitPrice, setUnitPrice] = useState(existing ? String(existing.unitPrice) : "");
   const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
   const [amountLocked, setAmountLocked] = useState(existing?.amountOverridden === 1);
@@ -56,10 +53,9 @@ export default function OutboundForm({ editId }: Props) {
   const [newCustomer, setNewCustomer] = useState("");
   const [addError, setAddError] = useState("");
   const [error, setError] = useState("");
-  const [unitHint, setUnitHint] = useState("");
 
   const item = ledger.items.find((row) => row.id === itemId);
-  const units = item ? allowedUnits(item, ledger.unitConversions) : [];
+  const unit = item?.baseUnit ?? FINISHED_UNIT;
   const activeCustomers = ledger.customers.filter((s) => !s.archived || s.id === customerId);
   const finishedItems = ledger.items.filter((s) => s.kind === "finished" && (!s.archived || s.id === itemId));
   const warehouses = ledger.warehouses.filter((s) => !s.archived || s.id === warehouseId);
@@ -74,11 +70,6 @@ export default function OutboundForm({ editId }: Props) {
     const last = lastOutboundPrice(ledger.outboundRecords.filter((row) => row.id !== existing?.id), nextCustomer, nextItem, nextGrade);
     if (!last) return;
     setUnitPrice(String(last.unitPrice));
-    if (last.unit !== unit) {
-      setUnitHint(`上次單位是「${UNIT_LABEL[last.unit]}」，目前是「${UNIT_LABEL[unit]}」，請確認單價`);
-    } else {
-      setUnitHint("");
-    }
     if (!amountLocked) setAmount(String(computedAmount(Number(qty) || 0, last.unitPrice)));
   }
 
@@ -247,8 +238,6 @@ export default function OutboundForm({ editId }: Props) {
         onChange={(e) => {
           const next = e.target.value;
           setItemId(next);
-          const nextItem = ledger.items.find((i) => i.id === next);
-          if (nextItem) setUnit(nextItem.baseUnit);
           applyLastPrice(customerId, next, grade === "醜" ? "醜" : grade);
         }}
       >
@@ -282,16 +271,18 @@ export default function OutboundForm({ editId }: Props) {
       ) : warehouseId && itemId ? (
         <Typography variant="body2" color="text.secondary">此倉目前 0</Typography>
       ) : null}
-      <Stack direction="row" spacing={1.5}>
-        <TextField label="數量" inputMode="decimal" value={qty} onChange={(e) => onQtyOrPrice(e.target.value, unitPrice)} />
-        <TextField select label="單位" value={unit} onChange={(e) => setUnit(e.target.value as UnitCode)}>
-          {units.map((u) => (
-            <MenuItem key={u} value={u}>{UNIT_LABEL[u]}</MenuItem>
-          ))}
-        </TextField>
-      </Stack>
-      {unitHint ? <Alert severity="warning">{unitHint}</Alert> : null}
-      <TextField label="單價（元／該單位）" inputMode="numeric" value={unitPrice} onChange={(e) => onQtyOrPrice(qty, e.target.value)} />
+      <TextField
+        label={`數量（${UNIT_LABEL[unit]}）`}
+        inputMode="decimal"
+        value={qty}
+        onChange={(e) => onQtyOrPrice(e.target.value, unitPrice)}
+      />
+      <TextField
+        label={`單價（元／${UNIT_LABEL[unit]}）`}
+        inputMode="numeric"
+        value={unitPrice}
+        onChange={(e) => onQtyOrPrice(qty, e.target.value)}
+      />
       <TextField
         label="金額"
         inputMode="numeric"

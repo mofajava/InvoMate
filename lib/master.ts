@@ -37,7 +37,7 @@ export function warehouseHistoryCounts(ledger: Ledger, warehouseId: string) {
     (row) => row.warehouseId === warehouseId && Math.abs(row.balance) > 1e-9,
   ).length;
   return {
-    workOrders: ledger.workOrders.filter((row) => row.warehouseId === warehouseId).length,
+    workOrders: ledger.workOrders.filter((row) => row.outputs.some((line) => line.warehouseId === warehouseId)).length,
     transfers: ledger.transfers.filter(
       (row) => row.fromWarehouseId === warehouseId || row.toWarehouseId === warehouseId,
     ).length,

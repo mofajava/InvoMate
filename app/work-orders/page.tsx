@@ -46,10 +46,15 @@ function Body() {
             <CardContent>
               <Typography sx={{ fontWeight: 500 }}>
                 {formatRoc(row.date)} · {itemName(row.outputItemId)}
-                {row.outputGrade ? `／${row.outputGrade}` : ""} → {warehouseName(row.warehouseId)}
+                {row.outputGrade ? `／${row.outputGrade}` : ""}
               </Typography>
               <Typography variant="body2">
-                產出 {formatQty(row.outputQty)} {UNIT_LABEL[row.outputUnit]}
+                產出 {formatQty(row.outputQty)} {UNIT_LABEL[row.outputUnit]} →{" "}
+                {row.outputs.length === 1
+                  ? warehouseName(row.outputs[0]?.warehouseId ?? "")
+                  : row.outputs
+                      .map((line) => `${warehouseName(line.warehouseId)} ${formatQty(line.qty)} ${UNIT_LABEL[row.outputUnit]}`)
+                      .join("、")}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 耗用{" "}

@@ -1,10 +1,14 @@
-import type { Item, UnitCode, UnitConversion } from "./types";
+import type { BaseUnit, Item, UnitCode, UnitConversion } from "./types";
 
 export const UNIT_LABEL: Record<UnitCode, string> = {
   jin: "斤",
   bag: "包",
   box: "箱",
+  barrel: "桶",
 };
+
+/** 成品庫存、加工產出、調撥、出貨都以桶為基準。 */
+export const FINISHED_UNIT: BaseUnit = "barrel";
 
 export class UnitError extends Error {
   constructor(message: string) {

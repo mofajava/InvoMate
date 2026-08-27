@@ -16,8 +16,7 @@ import { newId } from "@/lib/seed";
 import { finishedBalances } from "@/lib/stock";
 import { useLedger } from "@/lib/store";
 import { buildTransfer } from "@/lib/transfer";
-import type { UnitCode } from "@/lib/types";
-import { allowedUnits, UNIT_LABEL } from "@/lib/units";
+import { FINISHED_UNIT, UNIT_LABEL } from "@/lib/units";
 
 export default function TransferForm() {
   const router = useRouter();
@@ -29,16 +28,13 @@ export default function TransferForm() {
   const [fromWarehouseId, setFromWarehouseId] = useState("");
   const [toWarehouseId, setToWarehouseId] = useState("");
   const [qty, setQty] = useState("");
-  const [unit, setUnit] = useState<UnitCode>(
-    ledger.items.find((row) => row.id === initialFinishedId)?.baseUnit ?? "jin",
-  );
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
 
   const finishedItems = ledger.items.filter((item) => item.kind === "finished" && !item.archived);
   const warehouses = ledger.warehouses.filter((row) => !row.archived);
   const item = ledger.items.find((row) => row.id === itemId);
-  const units = item ? allowedUnits(item, ledger.unitConversions) : [];
+  const unit = item?.baseUnit ?? FINISHED_UNIT;
   const source = finishedBalances(ledger).find(
     (row) => row.itemId === itemId && row.grade === grade && row.warehouseId === fromWarehouseId,
   );
@@ -85,12 +81,7 @@ export default function TransferForm() {
         select
         label="成品"
         value={itemId}
-        onChange={(e) => {
-          const next = e.target.value;
-          setItemId(next);
-          const nextItem = ledger.items.find((i) => i.id === next);
-          if (nextItem) setUnit(nextItem.baseUnit);
-        }}
+        onChange={(e) => setItemId(e.target.value)}
       >
         <MenuItem value="">請選擇</MenuItem>
         {finishedItems.map((i) => (
@@ -120,14 +111,12 @@ export default function TransferForm() {
           <MenuItem key={w.id} value={w.id}>{w.name}</MenuItem>
         ))}
       </TextField>
-      <Stack direction="row" spacing={1.5}>
-        <TextField label="數量" inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} />
-        <TextField select label="單位" value={unit} onChange={(e) => setUnit(e.target.value as UnitCode)}>
-          {units.map((u) => (
-            <MenuItem key={u} value={u}>{UNIT_LABEL[u]}</MenuItem>
-          ))}
-        </TextField>
-      </Stack>
+      <TextField
+        label={`數量（${UNIT_LABEL[unit]}）`}
+        inputMode="decimal"
+        value={qty}
+        onChange={(e) => setQty(e.target.value)}
+      />
       <TextField label="備註" multiline minRows={3} value={note} onChange={(e) => setNote(e.target.value)} />
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Stack direction="row" spacing={1.5}>

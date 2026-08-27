@@ -1,4 +1,4 @@
-export type BaseUnit = "jin" | "bag";
+export type BaseUnit = "jin" | "bag" | "barrel";
 export type UnitCode = BaseUnit | "box";
 export type AdjustmentReason = "stocktake" | "consume" | "spoilage" | "other";
 export type SaveStatus = "idle" | "loading" | "saving" | "saved" | "error";
@@ -76,15 +76,22 @@ export type WorkOrderConsume = {
   qtyInBase: number;
 };
 
+export type WorkOrderOutput = {
+  id: string;
+  warehouseId: string;
+  qty: number;
+  qtyInBase: number;
+};
+
 export type WorkOrder = {
   id: string;
   date: string;
   outputItemId: string;
   outputGrade: string;
-  outputQty: number;
   outputUnit: UnitCode;
+  outputQty: number;
   outputQtyInBase: number;
-  warehouseId: string;
+  outputs: WorkOrderOutput[];
   consumes: WorkOrderConsume[];
   note: string;
   createdAt: string;

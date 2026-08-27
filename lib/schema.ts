@@ -13,7 +13,7 @@ const namedSchema = z.object({
 const itemSchema = z.object({
   id: z.string(),
   name: z.string(),
-  baseUnit: z.enum(["jin", "bag"]),
+  baseUnit: z.enum(["jin", "bag", "barrel"]),
   kind: z.enum(["raw", "finished"]).optional(),
   archived: z.union([z.literal(0), z.literal(1)]),
   createdAt: z.string(),
@@ -23,8 +23,8 @@ const itemSchema = z.object({
 const conversionSchema = z.object({
   id: z.string(),
   itemId: z.string(),
-  fromUnit: z.enum(["jin", "bag", "box"]),
-  toUnit: z.enum(["jin", "bag"]),
+  fromUnit: z.enum(["jin", "bag", "box", "barrel"]),
+  toUnit: z.enum(["jin", "bag", "barrel"]),
   fromQty: z.number().positive(),
   toQty: z.number().positive(),
 });
@@ -36,7 +36,7 @@ const inboundSchema = z.object({
   itemId: z.string(),
   grade: z.string(),
   qty: z.number(),
-  unit: z.enum(["jin", "bag", "box"]),
+  unit: z.enum(["jin", "bag", "box", "barrel"]),
   qtyInBase: z.number(),
   unitPrice: z.number(),
   computedAmount: z.number(),
@@ -65,7 +65,14 @@ const consumeSchema = z.object({
   itemId: z.string(),
   grade: z.string(),
   qty: z.number(),
-  unit: z.enum(["jin", "bag", "box"]),
+  unit: z.enum(["jin", "bag", "box", "barrel"]),
+  qtyInBase: z.number(),
+});
+
+const workOrderOutputSchema = z.object({
+  id: z.string(),
+  warehouseId: z.string(),
+  qty: z.number(),
   qtyInBase: z.number(),
 });
 
@@ -74,10 +81,11 @@ const workOrderSchema = z.object({
   date: z.string(),
   outputItemId: z.string(),
   outputGrade: z.string(),
-  outputQty: z.number(),
-  outputUnit: z.enum(["jin", "bag", "box"]),
-  outputQtyInBase: z.number(),
-  warehouseId: z.string(),
+  outputQty: z.number().optional(),
+  outputUnit: z.enum(["jin", "bag", "box", "barrel"]),
+  outputQtyInBase: z.number().optional(),
+  warehouseId: z.string().optional(),
+  outputs: z.array(workOrderOutputSchema).optional(),
   consumes: z.array(consumeSchema),
   note: z.string(),
   createdAt: z.string(),
@@ -92,7 +100,7 @@ const transferSchema = z.object({
   fromWarehouseId: z.string(),
   toWarehouseId: z.string(),
   qty: z.number(),
-  unit: z.enum(["jin", "bag", "box"]),
+  unit: z.enum(["jin", "bag", "box", "barrel"]),
   qtyInBase: z.number(),
   note: z.string(),
   createdAt: z.string(),
@@ -107,7 +115,7 @@ const outboundSchema = z.object({
   grade: z.string(),
   warehouseId: z.string(),
   qty: z.number(),
-  unit: z.enum(["jin", "bag", "box"]),
+  unit: z.enum(["jin", "bag", "box", "barrel"]),
   qtyInBase: z.number(),
   unitPrice: z.number(),
   computedAmount: z.number(),
